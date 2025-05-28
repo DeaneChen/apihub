@@ -1,4 +1,4 @@
-module uniapi
+module apihub
 
 go 1.24
 

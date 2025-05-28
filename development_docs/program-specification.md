@@ -1,4 +1,4 @@
-# UniAPI 项目规范说明
+#  APIHub 项目规范说明
 
 ## 1. 设计目标
 
@@ -80,7 +80,7 @@
 ## 4. 项目结构
 
 ```
-uniapi/
+apihub/
 ├── cmd/                # 应用入口
 ├── config/            # 配置文件
 ├── internal/
