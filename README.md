@@ -5,22 +5,45 @@
 ## 项目结构
 
 ```
-.
-├── api/            # API 协议定义（OpenAPI/Swagger 规范、protobuf 文件等）
-├── cmd/            # 主要的应用程序入口
-│   └── main.go     # 主程序入口文件
-├── config/         # 配置文件目录
-├── docs/           # 项目文档
-├── internal/       # 私有应用程序代码
-│   ├── api/        # HTTP API 处理层
-│   ├── model/      # 数据模型定义
-│   ├── service/    # 业务逻辑层
-│   ├── store/      # 数据存储层
-│   └── middleware/ # 中间件
-├── pkg/            # 可以被外部应用程序使用的库代码
-├── web/             # web应用程序
-├── scripts/        # 各类脚本
-└── test/           # 测试相关文件
+apihub/
+├── api/                    # API 定义目录
+│   ├── dashboard/         # Dashboard API 定义
+│   └── provider/         # 功能性 API 定义
+├── cmd/                    
+│   └── apihub/           # 主程序入口
+│       └── main.go
+├── configs/               # 配置文件目录
+│   ├── config.yaml.example
+│   └── config.go
+├── internal/              # 私有应用代码
+│   ├── auth/             # 认证相关
+│   │   ├── jwt/
+│   │   └── apikey/
+│   ├── dashboard/        # Dashboard 相关
+│   │   ├── handler/     # HTTP handlers
+│   │   ├── service/     # 业务逻辑
+│   │   └── repository/  # 数据访问
+│   ├── provider/        # 功能性 API 提供者
+│   │   ├── registry/    # 服务注册中心
+│   │   └── services/    # 具体服务实现
+│   ├── middleware/      # 中间件
+│   ├── model/          # 数据模型
+│   └── store/          # 数据存储层
+├── pkg/                  # 可复用的公共包
+│   └── utils/          # 通用工具
+├── web/                 # Web 前端
+│   ├── dashboard/      # 管理面板前端
+│   └── public/         # 静态资源
+├── scripts/             # 构建、部署脚本
+├── test/               # 测试文件
+│   ├── integration/    # 集成测试
+│   └── mock/          # 测试模拟数据
+├── docs/               # 项目文档
+│   ├── api/           # API 文档
+│   └── guides/        # 使用指南
+├── go.mod
+├── go.sum
+└── README.md
 ```
 
 ## 开发环境要求
