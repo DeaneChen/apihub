@@ -2,3 +2,4 @@
 .vscode/
 release/
 .cursor/
+build/
