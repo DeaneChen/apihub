@@ -118,7 +118,7 @@ func (s *InitializationService) createDefaultAdmin(ctx context.Context) (*model.
 		Password: string(hashedPassword),
 		Email:    "admin@apihub.local",
 		Role:     model.RoleAdmin,
-		Status:   model.StatusActive,
+		Status:   model.UserStatusActive,
 	}
 
 	if err := s.store.Users().Create(ctx, admin); err != nil {

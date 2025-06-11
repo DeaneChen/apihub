@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"apihub/internal/store"
@@ -101,7 +100,8 @@ func (s *SQLiteStore) Migrate() error {
 			continue
 		}
 
-		migrationPath := filepath.Join("migrations", entry.Name())
+		// 注意：embed.FS 总是使用正斜杠，即使在 Windows 上也是如此
+		migrationPath := "migrations/" + entry.Name()
 		content, err := migrationFiles.ReadFile(migrationPath)
 		if err != nil {
 			return &store.DBError{

@@ -24,8 +24,8 @@ const (
 
 // UserStatus 用户状态常量
 const (
-	StatusDisabled = 0
-	StatusActive   = 1
+	UserStatusDisabled = 0
+	UserStatusActive   = 1
 )
 
 // CreateUserRequest 创建用户请求
@@ -43,12 +43,6 @@ type UpdateUserRequest struct {
 	Status int    `json:"status" binding:"omitempty,oneof=0 1"`
 }
 
-// LoginRequest 登录请求
-type LoginRequest struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
-}
-
 // IsAdmin 检查用户是否为管理员
 func (u *User) IsAdmin() bool {
 	return u.Role == RoleAdmin
@@ -56,5 +50,5 @@ func (u *User) IsAdmin() bool {
 
 // IsActive 检查用户是否激活
 func (u *User) IsActive() bool {
-	return u.Status == StatusActive
+	return u.Status == UserStatusActive
 }
