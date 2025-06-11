@@ -5,6 +5,7 @@ import (
 
 	"apihub/internal/auth/apikey"
 	"apihub/internal/auth/jwt"
+	"apihub/internal/model"
 
 	"github.com/gin-gonic/gin"
 )
@@ -46,10 +47,7 @@ func AuthMiddleware(jwtService *jwt.JWTService, apiKeyService *apikey.APIKeyServ
 		}
 
 		// 两种认证方式都失败
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error":   "unauthorized",
-			"message": "authentication required",
-		})
+		c.JSON(http.StatusUnauthorized, model.NewErrorResponse(model.CodeUnauthorized, "需要身份认证"))
 		c.Abort()
 	}
 }

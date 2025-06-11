@@ -25,10 +25,7 @@ func APIKeyAuthMiddleware(apiKeyService *APIKeyService) gin.HandlerFunc {
 		// 从请求头获取APIKey
 		apiKey := getAPIKeyFromRequest(c)
 		if apiKey == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "unauthorized",
-				"message": "missing API key",
-			})
+			c.JSON(http.StatusUnauthorized, model.NewErrorResponse(model.CodeUnauthorized, "缺少API密钥"))
 			c.Abort()
 			return
 		}
@@ -36,10 +33,7 @@ func APIKeyAuthMiddleware(apiKeyService *APIKeyService) gin.HandlerFunc {
 		// 验证APIKey
 		apiKeyModel, err := apiKeyService.ValidateAPIKey(apiKey)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "unauthorized",
-				"message": "invalid API key: " + err.Error(),
-			})
+			c.JSON(http.StatusUnauthorized, model.NewErrorResponse(model.CodeUnauthorized, "API密钥无效: "+err.Error()))
 			c.Abort()
 			return
 		}
@@ -85,20 +79,14 @@ func RequireScopeMiddleware(requiredScope string) gin.HandlerFunc {
 		// 获取APIKey
 		apiKeyModel, exists := GetAPIKey(c)
 		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "unauthorized",
-				"message": "API key not found in context",
-			})
+			c.JSON(http.StatusUnauthorized, model.NewErrorResponse(model.CodeUnauthorized, "上下文中未找到API密钥"))
 			c.Abort()
 			return
 		}
 
 		// 检查权限范围 - 当前APIKey模型不包含Scopes字段，默认允许所有操作
 		if !apiKeyModel.IsActive() {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error":   "forbidden",
-				"message": "API key is not active",
-			})
+			c.JSON(http.StatusForbidden, model.NewErrorResponse(model.CodeForbidden, "API密钥未激活"))
 			c.Abort()
 			return
 		}

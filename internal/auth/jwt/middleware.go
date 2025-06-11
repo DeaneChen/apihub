@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"strings"
 
+	"apihub/internal/model"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -27,10 +29,7 @@ func JWTAuthMiddleware(jwtService *JWTService) gin.HandlerFunc {
 		// 从请求头获取Token
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "unauthorized",
-				"message": "missing authorization header",
-			})
+			c.JSON(http.StatusUnauthorized, model.NewErrorResponse(model.CodeUnauthorized, "缺少授权头"))
 			c.Abort()
 			return
 		}
@@ -38,10 +37,7 @@ func JWTAuthMiddleware(jwtService *JWTService) gin.HandlerFunc {
 		// 检查Bearer前缀
 		const bearerPrefix = "Bearer "
 		if !strings.HasPrefix(authHeader, bearerPrefix) {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "unauthorized",
-				"message": "invalid authorization header format",
-			})
+			c.JSON(http.StatusUnauthorized, model.NewErrorResponse(model.CodeUnauthorized, "授权头格式无效"))
 			c.Abort()
 			return
 		}
@@ -49,10 +45,7 @@ func JWTAuthMiddleware(jwtService *JWTService) gin.HandlerFunc {
 		// 提取Token
 		tokenString := authHeader[len(bearerPrefix):]
 		if tokenString == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "unauthorized",
-				"message": "missing token",
-			})
+			c.JSON(http.StatusUnauthorized, model.NewErrorResponse(model.CodeUnauthorized, "缺少Token"))
 			c.Abort()
 			return
 		}
@@ -60,10 +53,7 @@ func JWTAuthMiddleware(jwtService *JWTService) gin.HandlerFunc {
 		// 验证Token
 		claims, err := jwtService.ValidateToken(tokenString)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "unauthorized",
-				"message": "invalid token: " + err.Error(),
-			})
+			c.JSON(http.StatusUnauthorized, model.NewErrorResponse(model.CodeTokenInvalid, "Token无效: "+err.Error()))
 			c.Abort()
 			return
 		}
@@ -173,10 +163,7 @@ func RequireRole(roles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userRole, exists := GetUserRole(c)
 		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "unauthorized",
-				"message": "user role not found",
-			})
+			c.JSON(http.StatusUnauthorized, model.NewErrorResponse(model.CodeUnauthorized, "未找到用户角色"))
 			c.Abort()
 			return
 		}
@@ -189,10 +176,7 @@ func RequireRole(roles ...string) gin.HandlerFunc {
 			}
 		}
 
-		c.JSON(http.StatusForbidden, gin.H{
-			"error":   "forbidden",
-			"message": "insufficient permissions",
-		})
+		c.JSON(http.StatusForbidden, model.NewErrorResponse(model.CodeForbidden, "权限不足"))
 		c.Abort()
 	}
 }

@@ -1,10 +1,10 @@
 package permission
 
 import (
-	"fmt"
 	"net/http"
 
-	jwtAuth "apihub/internal/auth/jwt"
+	"apihub/internal/auth/jwt"
+	"apihub/internal/model"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,22 +13,16 @@ import (
 func RequirePermissionMiddleware(permissionService *PermissionService, requiredPermission string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 获取用户角色
-		userRole, exists := jwtAuth.GetUserRole(c)
+		userRole, exists := jwt.GetUserRole(c)
 		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "unauthorized",
-				"message": "user role not found",
-			})
+			c.JSON(http.StatusUnauthorized, model.NewErrorResponse(model.CodeUnauthorized, "未找到用户角色"))
 			c.Abort()
 			return
 		}
 
 		// 检查权限
 		if !permissionService.HasPermission(userRole, requiredPermission) {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error":   "forbidden",
-				"message": "insufficient permissions",
-			})
+			c.JSON(http.StatusForbidden, model.NewErrorResponse(model.CodeForbidden, "权限不足"))
 			c.Abort()
 			return
 		}
@@ -41,22 +35,16 @@ func RequirePermissionMiddleware(permissionService *PermissionService, requiredP
 func RequireAnyPermissionMiddleware(permissionService *PermissionService, requiredPermissions []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 获取用户角色
-		userRole, exists := jwtAuth.GetUserRole(c)
+		userRole, exists := jwt.GetUserRole(c)
 		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "unauthorized",
-				"message": "user role not found",
-			})
+			c.JSON(http.StatusUnauthorized, model.NewErrorResponse(model.CodeUnauthorized, "未找到用户角色"))
 			c.Abort()
 			return
 		}
 
-		// 检查是否具有任意一个权限
+		// 检查权限
 		if !permissionService.HasAnyPermission(userRole, requiredPermissions) {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error":   "forbidden",
-				"message": "insufficient permissions",
-			})
+			c.JSON(http.StatusForbidden, model.NewErrorResponse(model.CodeForbidden, "权限不足"))
 			c.Abort()
 			return
 		}
@@ -69,22 +57,16 @@ func RequireAnyPermissionMiddleware(permissionService *PermissionService, requir
 func RequireAllPermissionsMiddleware(permissionService *PermissionService, requiredPermissions []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 获取用户角色
-		userRole, exists := jwtAuth.GetUserRole(c)
+		userRole, exists := jwt.GetUserRole(c)
 		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "unauthorized",
-				"message": "user role not found",
-			})
+			c.JSON(http.StatusUnauthorized, model.NewErrorResponse(model.CodeUnauthorized, "未找到用户角色"))
 			c.Abort()
 			return
 		}
 
-		// 检查是否具有所有权限
+		// 检查权限
 		if !permissionService.HasAllPermissions(userRole, requiredPermissions) {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error":   "forbidden",
-				"message": "insufficient permissions",
-			})
+			c.JSON(http.StatusForbidden, model.NewErrorResponse(model.CodeForbidden, "权限不足"))
 			c.Abort()
 			return
 		}
@@ -94,58 +76,29 @@ func RequireAllPermissionsMiddleware(permissionService *PermissionService, requi
 }
 
 // RequireResourceAccessMiddleware 要求资源访问权限的中间件
-// 用于检查用户是否可以访问特定用户的资源
-func RequireResourceAccessMiddleware(permissionService *PermissionService, requiredPermission string, resourceUserIDParam string) gin.HandlerFunc {
+func RequireResourceAccessMiddleware(permissionService *PermissionService, permission string, getResourceUserID func(*gin.Context) (int, error)) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 获取当前用户信息
-		userRole, exists := jwtAuth.GetUserRole(c)
-		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "unauthorized",
-				"message": "user role not found",
-			})
+		// 获取用户信息
+		userRole, roleExists := jwt.GetUserRole(c)
+		userID, userIDExists := jwt.GetUserID(c)
+
+		if !roleExists || !userIDExists {
+			c.JSON(http.StatusUnauthorized, model.NewErrorResponse(model.CodeUnauthorized, "未找到用户信息"))
 			c.Abort()
 			return
 		}
 
-		userID, exists := jwtAuth.GetUserID(c)
-		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "unauthorized",
-				"message": "user ID not found",
-			})
-			c.Abort()
-			return
-		}
-
-		// 获取资源用户ID
-		resourceUserIDStr := c.Param(resourceUserIDParam)
-		if resourceUserIDStr == "" {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error":   "bad_request",
-				"message": "resource user ID not provided",
-			})
-			c.Abort()
-			return
-		}
-
-		// 将字符串转换为整数
-		var resourceUserID int
-		if _, err := fmt.Sscanf(resourceUserIDStr, "%d", &resourceUserID); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error":   "bad_request",
-				"message": "invalid resource user ID",
-			})
+		// 获取资源所属用户ID
+		resourceUserID, err := getResourceUserID(c)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, model.NewErrorResponse(model.CodeInvalidParams, "获取资源信息失败: "+err.Error()))
 			c.Abort()
 			return
 		}
 
 		// 检查资源访问权限
-		if !permissionService.CanAccessResource(userRole, userID, resourceUserID, requiredPermission) {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error":   "forbidden",
-				"message": "insufficient permissions to access this resource",
-			})
+		if !permissionService.CanAccessResource(userRole, userID, resourceUserID, permission) {
+			c.JSON(http.StatusForbidden, model.NewErrorResponse(model.CodeForbidden, "无权访问该资源"))
 			c.Abort()
 			return
 		}
@@ -157,21 +110,15 @@ func RequireResourceAccessMiddleware(permissionService *PermissionService, requi
 // AdminOnlyMiddleware 仅管理员可访问的中间件
 func AdminOnlyMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userRole, exists := jwtAuth.GetUserRole(c)
+		userRole, exists := jwt.GetUserRole(c)
 		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "unauthorized",
-				"message": "user role not found",
-			})
+			c.JSON(http.StatusUnauthorized, model.NewErrorResponse(model.CodeUnauthorized, "未找到用户角色"))
 			c.Abort()
 			return
 		}
 
 		if userRole != RoleAdmin {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error":   "forbidden",
-				"message": "admin access required",
-			})
+			c.JSON(http.StatusForbidden, model.NewErrorResponse(model.CodeForbidden, "需要管理员权限"))
 			c.Abort()
 			return
 		}
