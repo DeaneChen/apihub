@@ -1,10 +1,11 @@
 package model
 
 // APIResponse 统一API响应格式
+// @Description 统一API响应格式
 type APIResponse struct {
-	Code    int         `json:"code"`    // 状态码，0表示成功
-	Message string      `json:"message"` // 状态信息
-	Data    interface{} `json:"data"`    // 响应数据
+	Code    int         `json:"code" example:"0"`     // 状态码，0表示成功
+	Message string      `json:"message" example:"ok"` // 状态信息
+	Data    interface{} `json:"data"`                 // 响应数据
 }
 
 // 响应状态码常量

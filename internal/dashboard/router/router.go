@@ -6,7 +6,34 @@ import (
 	"apihub/internal/store"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
+
+// @title           APIHub API
+// @version         1.0
+// @description     统一API业务服务框架，实现多种功能性服务API并集中管理
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   API Support
+// @contact.url    http://www.swagger.io/support
+// @contact.email  support@swagger.io
+
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host      localhost:8080
+// @BasePath  /api/v1
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description 请输入 "Bearer {token}" 格式的JWT令牌
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name X-API-Key
+// @description API Key 认证
 
 // Router 主路由器
 type Router struct {
@@ -30,6 +57,9 @@ func (r *Router) SetupRoutes() *gin.Engine {
 	engine.Use(gin.Recovery())
 	engine.Use(corsMiddleware())
 
+	// Swagger文档路由
+	engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	// API版本1路由组
 	v1 := engine.Group("/api/v1")
 	{
@@ -49,6 +79,12 @@ func (r *Router) SetupRoutes() *gin.Engine {
 	return engine
 }
 
+// @Summary      健康检查接口
+// @Description  返回服务健康状态
+// @Tags         系统
+// @Produce      json
+// @Success      200  {object}  model.APIResponse
+// @Router       /health [get]
 // healthCheck 健康检查接口
 func healthCheck(c *gin.Context) {
 	c.JSON(200, model.NewSuccessResponse(gin.H{

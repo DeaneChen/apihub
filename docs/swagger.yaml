@@ -1,0 +1,194 @@
+basePath: /api/v1
+definitions:
+  model.APIResponse:
+    description: 统一API响应格式
+    properties:
+      code:
+        description: 状态码，0表示成功
+        example: 0
+        type: integer
+      data:
+        description: 响应数据
+      message:
+        description: 状态信息
+        example: ok
+        type: string
+    type: object
+  model.LoginRequest:
+    properties:
+      password:
+        maxLength: 100
+        minLength: 6
+        type: string
+      username:
+        maxLength: 50
+        minLength: 1
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  model.LoginResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        description: 访问令牌过期时间(秒)
+        type: integer
+      token_type:
+        type: string
+      user:
+        $ref: '#/definitions/model.UserInfo'
+    type: object
+  model.LogoutResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  model.UserInfo:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      role:
+        type: string
+      status:
+        type: integer
+      username:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: 统一API业务服务框架，实现多种功能性服务API并集中管理
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: APIHub API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: 用户登录获取JWT Token
+      parameters:
+      - description: 登录请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.LoginResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      summary: 用户登录
+      tags:
+      - 认证
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: 用户登出，撤销JWT Token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.LogoutResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 用户登出
+      tags:
+      - 认证
+  /auth/profile:
+    get:
+      consumes:
+      - application/json
+      description: 获取当前登录用户的详细信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.UserInfo'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 获取当前用户信息
+      tags:
+      - 认证
+  /health:
+    get:
+      description: 返回服务健康状态
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      summary: 健康检查接口
+      tags:
+      - 系统
+securityDefinitions:
+  ApiKeyAuth:
+    description: API Key 认证
+    in: header
+    name: X-API-Key
+    type: apiKey
+  BearerAuth:
+    description: 请输入 "Bearer {token}" 格式的JWT令牌
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

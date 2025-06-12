@@ -36,13 +36,43 @@ func (r *AuthRouter) RegisterRoutes(router *gin.RouterGroup) {
 	authGroup := router.Group("/auth")
 	{
 		// 公开路由（无需认证）
+
+		// @Summary      用户登录
+		// @Description  用户登录并获取JWT令牌
+		// @Tags         认证
+		// @Accept       json
+		// @Produce      json
+		// @Param        credentials  body      object  true  "登录凭证"
+		// @Success      200          {object}  model.APIResponse
+		// @Failure      400          {object}  model.APIResponse
+		// @Failure      401          {object}  model.APIResponse
+		// @Router       /api/v1/auth/login [post]
 		authGroup.POST("/login", r.authHandler.Login)
 
 		// 需要认证的路由
 		protected := authGroup.Group("")
 		protected.Use(middleware.JWTOnlyMiddleware(r.authService.JWTService))
 		{
+			// @Summary      用户登出
+			// @Description  使当前JWT令牌失效
+			// @Tags         认证
+			// @Accept       json
+			// @Produce      json
+			// @Security     BearerAuth
+			// @Success      200  {object}  model.APIResponse
+			// @Failure      401  {object}  model.APIResponse
+			// @Router       /api/v1/auth/logout [post]
 			protected.POST("/logout", r.authHandler.Logout)
+
+			// @Summary      获取用户资料
+			// @Description  获取当前登录用户的资料信息
+			// @Tags         认证
+			// @Accept       json
+			// @Produce      json
+			// @Security     BearerAuth
+			// @Success      200  {object}  model.APIResponse
+			// @Failure      401  {object}  model.APIResponse
+			// @Router       /api/v1/auth/profile [get]
 			protected.GET("/profile", r.authHandler.GetProfile)
 		}
 	}
@@ -57,7 +87,15 @@ func (r *AuthRouter) RegisterDashboardRoutes(router *gin.RouterGroup) {
 		// 这里可以添加其他dashboard相关的路由
 		// 例如：用户管理、API密钥管理等
 
-		// 示例：获取用户信息
+		// @Summary      获取用户资料
+		// @Description  获取当前登录用户的资料信息（Dashboard版本）
+		// @Tags         仪表盘
+		// @Accept       json
+		// @Produce      json
+		// @Security     BearerAuth
+		// @Success      200  {object}  model.APIResponse
+		// @Failure      401  {object}  model.APIResponse
+		// @Router       /api/v1/dashboard/profile [get]
 		dashboardGroup.GET("/profile", r.authHandler.GetProfile)
 
 		// TODO: 添加其他dashboard功能路由

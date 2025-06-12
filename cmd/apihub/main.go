@@ -10,6 +10,9 @@ import (
 	"apihub/internal/dashboard/router"
 	"apihub/internal/store/sqlite"
 
+	// 导入 Swagger 文档
+	_ "apihub/docs"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -61,7 +64,7 @@ func main() {
 
 	// 启动服务器
 	log.Println("Starting APIHub server on :8080")
-	log.Println("API Documentation: http://localhost:8080/api/v1/health")
+	log.Println("API Documentation: http://localhost:8080/swagger/index.html")
 	log.Println("Auth endpoints:")
 	log.Println("  POST /api/v1/auth/login")
 	log.Println("  POST /api/v1/auth/logout")
