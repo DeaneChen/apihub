@@ -1,6 +1,7 @@
 package apikey
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
@@ -67,7 +68,7 @@ func (s *APIKeyService) CreateAPIKey(userID int, name, description string, expir
 	}
 
 	// 保存到数据库
-	err = s.store.APIKeys().Create(nil, apiKey)
+	err = s.store.APIKeys().Create(context.Background(), apiKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create API key: %w", err)
 	}
@@ -90,7 +91,7 @@ func (s *APIKeyService) ValidateAPIKey(keyString string) (*model.APIKey, error) 
 	}
 
 	// 从数据库查询
-	apiKey, err := s.store.APIKeys().GetByKey(nil, encryptedKey)
+	apiKey, err := s.store.APIKeys().GetByKey(context.Background(), encryptedKey)
 	if err != nil {
 		return nil, fmt.Errorf("API key not found: %w", err)
 	}
@@ -117,7 +118,7 @@ func (s *APIKeyService) ValidateAPIKey(keyString string) (*model.APIKey, error) 
 
 // GetAPIKeysByUserID 获取用户的所有APIKey
 func (s *APIKeyService) GetAPIKeysByUserID(userID int) ([]*model.APIKey, error) {
-	apiKeys, err := s.store.APIKeys().GetByUserID(nil, userID)
+	apiKeys, err := s.store.APIKeys().GetByUserID(context.Background(), userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get API keys: %w", err)
 	}
@@ -139,7 +140,7 @@ func (s *APIKeyService) GetAPIKeysByUserID(userID int) ([]*model.APIKey, error) 
 // UpdateAPIKey 更新APIKey
 func (s *APIKeyService) UpdateAPIKey(apiKeyID int, name string, status int, expiresAt *time.Time) error {
 	// 获取现有APIKey
-	apiKey, err := s.store.APIKeys().GetByID(nil, apiKeyID)
+	apiKey, err := s.store.APIKeys().GetByID(context.Background(), apiKeyID)
 	if err != nil {
 		return fmt.Errorf("failed to get API key: %w", err)
 	}
@@ -156,7 +157,7 @@ func (s *APIKeyService) UpdateAPIKey(apiKeyID int, name string, status int, expi
 	}
 
 	// 保存更新
-	err = s.store.APIKeys().Update(nil, apiKey)
+	err = s.store.APIKeys().Update(context.Background(), apiKey)
 	if err != nil {
 		return fmt.Errorf("failed to update API key: %w", err)
 	}
@@ -171,7 +172,7 @@ func (s *APIKeyService) RevokeAPIKey(apiKeyID int) error {
 
 // DeleteAPIKey 删除APIKey
 func (s *APIKeyService) DeleteAPIKey(apiKeyID int) error {
-	err := s.store.APIKeys().Delete(nil, apiKeyID)
+	err := s.store.APIKeys().Delete(context.Background(), apiKeyID)
 	if err != nil {
 		return fmt.Errorf("failed to delete API key: %w", err)
 	}
@@ -181,7 +182,7 @@ func (s *APIKeyService) DeleteAPIKey(apiKeyID int) error {
 // RegenerateAPIKey 重新生成APIKey
 func (s *APIKeyService) RegenerateAPIKey(apiKeyID int) (*model.APIKey, error) {
 	// 获取现有APIKey
-	apiKey, err := s.store.APIKeys().GetByID(nil, apiKeyID)
+	apiKey, err := s.store.APIKeys().GetByID(context.Background(), apiKeyID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get API key: %w", err)
 	}
@@ -201,7 +202,7 @@ func (s *APIKeyService) RegenerateAPIKey(apiKeyID int) (*model.APIKey, error) {
 	// 更新APIKey
 	apiKey.APIKey = encryptedKey
 
-	err = s.store.APIKeys().Update(nil, apiKey)
+	err = s.store.APIKeys().Update(context.Background(), apiKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update API key: %w", err)
 	}

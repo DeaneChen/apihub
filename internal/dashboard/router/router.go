@@ -37,13 +37,17 @@ import (
 
 // Router 主路由器
 type Router struct {
-	authRouter *AuthRouter
+	authRouter   *AuthRouter
+	apiKeyRouter *APIKeyRouter
+	authServices *auth.AuthServices
 }
 
 // NewRouter 创建主路由器实例
 func NewRouter(store store.Store, authServices *auth.AuthServices) *Router {
 	return &Router{
-		authRouter: NewAuthRouter(store, authServices),
+		authRouter:   NewAuthRouter(store, authServices),
+		apiKeyRouter: NewAPIKeyRouter(store, authServices),
+		authServices: authServices,
 	}
 }
 
@@ -70,7 +74,11 @@ func (r *Router) SetupRoutes() *gin.Engine {
 		r.authRouter.RegisterRoutes(v1)
 
 		// Dashboard路由（需要JWT认证）
-		r.authRouter.RegisterDashboardRoutes(v1)
+		dashboardGroup := v1.Group("/dashboard")
+		r.authRouter.RegisterDashboardRoutes(dashboardGroup)
+
+		// API密钥路由（需要JWT认证）
+		r.apiKeyRouter.RegisterRoutes(dashboardGroup)
 
 		// API路由（支持JWT和APIKey认证）
 		r.authRouter.RegisterAPIRoutes(v1)

@@ -79,31 +79,24 @@ func (r *AuthRouter) RegisterRoutes(router *gin.RouterGroup) {
 }
 
 // RegisterDashboardRoutes 注册Dashboard路由（需要JWT认证）
-func (r *AuthRouter) RegisterDashboardRoutes(router *gin.RouterGroup) {
-	// Dashboard路由组，需要JWT认证
-	dashboardGroup := router.Group("/dashboard")
+func (r *AuthRouter) RegisterDashboardRoutes(dashboardGroup *gin.RouterGroup) {
+	// 添加JWT认证中间件
 	dashboardGroup.Use(middleware.JWTOnlyMiddleware(r.authService.JWTService))
-	{
-		// 这里可以添加其他dashboard相关的路由
-		// 例如：用户管理、API密钥管理等
 
-		// @Summary      获取用户资料
-		// @Description  获取当前登录用户的资料信息（Dashboard版本）
-		// @Tags         仪表盘
-		// @Accept       json
-		// @Produce      json
-		// @Security     BearerAuth
-		// @Success      200  {object}  model.APIResponse
-		// @Failure      401  {object}  model.APIResponse
-		// @Router       /api/v1/dashboard/profile [get]
-		dashboardGroup.GET("/profile", r.authHandler.GetProfile)
+	// @Summary      获取用户资料
+	// @Description  获取当前登录用户的资料信息（Dashboard版本）
+	// @Tags         仪表盘
+	// @Accept       json
+	// @Produce      json
+	// @Security     BearerAuth
+	// @Success      200  {object}  model.APIResponse
+	// @Failure      401  {object}  model.APIResponse
+	// @Router       /api/v1/dashboard/profile [get]
+	dashboardGroup.GET("/profile", r.authHandler.GetProfile)
 
-		// TODO: 添加其他dashboard功能路由
-		// dashboardGroup.GET("/users", userHandler.ListUsers)
-		// dashboardGroup.POST("/users", userHandler.CreateUser)
-		// dashboardGroup.GET("/api-keys", apiKeyHandler.ListAPIKeys)
-		// dashboardGroup.POST("/api-keys", apiKeyHandler.CreateAPIKey)
-	}
+	// TODO: 添加其他dashboard功能路由
+	// dashboardGroup.GET("/users", userHandler.ListUsers)
+	// dashboardGroup.POST("/users", userHandler.CreateUser)
 }
 
 // RegisterAPIRoutes 注册API路由（支持JWT和APIKey认证）

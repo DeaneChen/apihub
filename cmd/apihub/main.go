@@ -50,6 +50,11 @@ func main() {
 		},
 	}
 
+	// 确保数据库保持连接
+	if err := store.Connect(); err != nil {
+		log.Fatalf("数据库连接失败: %v", err)
+	}
+
 	// 创建认证服务
 	authServices, err := auth.NewAuthServices(authConfig, store)
 	if err != nil {
@@ -69,6 +74,10 @@ func main() {
 	log.Println("  POST /api/v1/auth/login")
 	log.Println("  POST /api/v1/auth/logout")
 	log.Println("  GET  /api/v1/auth/profile")
+	log.Println("API Key endpoints:")
+	log.Println("  GET  /api/v1/dashboard/apikeys/list")
+	log.Println("  POST /api/v1/dashboard/apikeys/generate")
+	log.Println("  POST /api/v1/dashboard/apikeys/delete")
 
 	if err := engine.Run(":8080"); err != nil {
 		log.Fatalf("Failed to start server: %v", err)

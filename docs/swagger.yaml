@@ -1,5 +1,41 @@
 basePath: /api/v1
 definitions:
+  handler.DeleteAPIKeyRequest:
+    properties:
+      api_key_id:
+        type: integer
+    required:
+    - api_key_id
+    type: object
+  handler.GenerateAPIKeyRequest:
+    properties:
+      description:
+        type: string
+      expires_at:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  model.APIKey:
+    properties:
+      api_key:
+        type: string
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: integer
+      key_name:
+        type: string
+      status:
+        description: '0: disabled, 1: active'
+        type: integer
+      user_id:
+        type: integer
+    type: object
   model.APIResponse:
     description: 统一API响应格式
     properties:
@@ -167,6 +203,119 @@ paths:
       summary: 获取当前用户信息
       tags:
       - 认证
+  /dashboard/apikeys/delete:
+    post:
+      consumes:
+      - application/json
+      description: 删除当前用户的指定API密钥
+      parameters:
+      - description: API密钥删除请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.DeleteAPIKeyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 删除API密钥
+      tags:
+      - API密钥
+  /dashboard/apikeys/generate:
+    post:
+      consumes:
+      - application/json
+      description: 为当前用户生成新的API密钥
+      parameters:
+      - description: API密钥生成请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.GenerateAPIKeyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.APIKey'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 生成API密钥
+      tags:
+      - API密钥
+  /dashboard/apikeys/list:
+    get:
+      consumes:
+      - application/json
+      description: 列出当前用户的所有API密钥
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.APIKey'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 列出API密钥
+      tags:
+      - API密钥
   /health:
     get:
       description: 返回服务健康状态
