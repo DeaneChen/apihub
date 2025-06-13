@@ -32,8 +32,8 @@ const (
 type CreateUserRequest struct {
 	Username string `json:"username" binding:"required,min=3,max=50"`
 	Password string `json:"password" binding:"required,min=6"`
-	Email    string `json:"email" binding:"email"`
-	Role     string `json:"role" binding:"oneof=admin user"`
+	Email    string `json:"email" binding:"omitempty,email"`
+	Role     string `json:"role" binding:"required,oneof=admin user"`
 }
 
 // UpdateUserRequest 更新用户请求
@@ -41,6 +41,12 @@ type UpdateUserRequest struct {
 	Email  string `json:"email" binding:"omitempty,email"`
 	Role   string `json:"role" binding:"omitempty,oneof=admin user"`
 	Status int    `json:"status" binding:"omitempty,oneof=0 1"`
+}
+
+// UserListResponse 用户列表响应
+type UserListResponse struct {
+	Total int         `json:"total"`
+	Users []*UserInfo `json:"users"`
 }
 
 // IsAdmin 检查用户是否为管理员

@@ -1,11 +1,40 @@
 basePath: /api/v1
 definitions:
+  handler.CreateUserRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 6
+        type: string
+      role:
+        enum:
+        - admin
+        - user
+        type: string
+      username:
+        maxLength: 50
+        minLength: 3
+        type: string
+    required:
+    - password
+    - role
+    - username
+    type: object
   handler.DeleteAPIKeyRequest:
     properties:
       api_key_id:
         type: integer
     required:
     - api_key_id
+    type: object
+  handler.DeleteUserRequest:
+    properties:
+      user_id:
+        minimum: 1
+        type: integer
+    required:
+    - user_id
     type: object
   handler.GenerateAPIKeyRequest:
     properties:
@@ -17,6 +46,33 @@ definitions:
         type: string
     required:
     - name
+    type: object
+  handler.ResetPasswordRequest:
+    properties:
+      new_password:
+        minLength: 6
+        type: string
+      user_id:
+        minimum: 1
+        type: integer
+    required:
+    - new_password
+    - user_id
+    type: object
+  handler.UpdateUserRequest:
+    properties:
+      email:
+        type: string
+      role:
+        enum:
+        - admin
+        - user
+        type: string
+      status:
+        enum:
+        - 0
+        - 1
+        type: integer
     type: object
   model.APIKey:
     properties:
@@ -50,6 +106,23 @@ definitions:
         example: ok
         type: string
     type: object
+  model.ChangePasswordRequest:
+    properties:
+      current_password:
+        minLength: 6
+        type: string
+      new_password:
+        minLength: 6
+        type: string
+    required:
+    - current_password
+    - new_password
+    type: object
+  model.ChangePasswordResponse:
+    properties:
+      message:
+        type: string
+    type: object
   model.LoginRequest:
     properties:
       password:
@@ -81,8 +154,22 @@ definitions:
       message:
         type: string
     type: object
+  model.UpdateProfileRequest:
+    properties:
+      email:
+        type: string
+    type: object
+  model.UpdateProfileResponse:
+    properties:
+      message:
+        type: string
+      user:
+        $ref: '#/definitions/model.UserInfo'
+    type: object
   model.UserInfo:
     properties:
+      created_at:
+        type: string
       email:
         type: string
       id:
@@ -91,8 +178,19 @@ definitions:
         type: string
       status:
         type: integer
+      updated_at:
+        type: string
       username:
         type: string
+    type: object
+  model.UserListResponse:
+    properties:
+      total:
+        type: integer
+      users:
+        items:
+          $ref: '#/definitions/model.UserInfo'
+        type: array
     type: object
 host: localhost:8080
 info:
@@ -108,6 +206,263 @@ info:
   title: APIHub API
   version: "1.0"
 paths:
+  /api/v1/dashboard/user/create:
+    post:
+      consumes:
+      - application/json
+      description: 创建新的系统用户
+      parameters:
+      - description: 创建用户请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.UserInfo'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 创建新用户
+      tags:
+      - 用户管理
+  /api/v1/dashboard/user/delete:
+    post:
+      consumes:
+      - application/json
+      description: 删除指定的用户
+      parameters:
+      - description: 删除用户请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.DeleteUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 删除用户
+      tags:
+      - 用户管理
+  /api/v1/dashboard/user/info/{id}:
+    get:
+      consumes:
+      - application/json
+      description: 根据用户ID获取用户详细信息
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.UserInfo'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 获取用户信息
+      tags:
+      - 用户管理
+  /api/v1/dashboard/user/list:
+    get:
+      consumes:
+      - application/json
+      description: 分页获取系统中的用户列表
+      parameters:
+      - description: 页码，默认1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: 每页数量，默认20
+        in: query
+        maximum: 100
+        minimum: 1
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.UserListResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 获取用户列表
+      tags:
+      - 用户管理
+  /api/v1/dashboard/user/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: 重置指定用户的密码
+      parameters:
+      - description: 重置密码请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 重置用户密码
+      tags:
+      - 用户管理
+  /api/v1/dashboard/user/update/{id}:
+    post:
+      consumes:
+      - application/json
+      description: 更新指定用户的信息
+      parameters:
+      - description: 用户ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 更新用户请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.UserInfo'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 更新用户信息
+      tags:
+      - 用户管理
   /auth/login:
     post:
       consumes:
@@ -173,6 +528,47 @@ paths:
       summary: 用户登出
       tags:
       - 认证
+  /auth/password/change:
+    post:
+      consumes:
+      - application/json
+      description: 修改当前登录用户的密码
+      parameters:
+      - description: 修改密码请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.ChangePasswordResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 修改密码
+      tags:
+      - 认证
   /auth/profile:
     get:
       consumes:
@@ -201,6 +597,47 @@ paths:
       security:
       - BearerAuth: []
       summary: 获取当前用户信息
+      tags:
+      - 认证
+  /auth/profile/update:
+    post:
+      consumes:
+      - application/json
+      description: 更新当前登录用户的个人资料
+      parameters:
+      - description: 更新个人资料请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.UpdateProfileResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 更新个人资料
       tags:
       - 认证
   /dashboard/apikeys/delete:

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"time"
 
 	"apihub/internal/auth/jwt"
 	"apihub/internal/model"
@@ -85,4 +86,72 @@ func (s *AuthService) ValidateToken(tokenString string) (*jwt.CustomClaims, erro
 // GetUserByID 根据ID获取用户信息
 func (s *AuthService) GetUserByID(ctx context.Context, userID int) (*model.User, error) {
 	return s.store.Users().GetByID(ctx, userID)
+}
+
+// UpdateProfile 更新用户个人资料
+func (s *AuthService) UpdateProfile(ctx context.Context, userID int, req *model.UpdateProfileRequest) (*model.User, error) {
+	// 获取用户
+	user, err := s.store.Users().GetByID(ctx, userID)
+	if err != nil {
+		return nil, errors.New("用户不存在")
+	}
+
+	// 更新邮箱（如果提供）
+	if req.Email != "" && req.Email != user.Email {
+		// 检查邮箱是否已被其他用户使用
+		existingUser, _ := s.store.Users().GetByEmail(ctx, req.Email)
+		if existingUser != nil && existingUser.ID != userID {
+			return nil, errors.New("邮箱已被其他用户使用")
+		}
+		user.Email = req.Email
+	}
+
+	// 更新时间
+	user.UpdatedAt = time.Now()
+
+	// 保存到数据库
+	err = s.store.Users().Update(ctx, user)
+	if err != nil {
+		return nil, errors.New("更新个人资料失败: " + err.Error())
+	}
+
+	return user, nil
+}
+
+// ChangePassword 修改用户密码
+func (s *AuthService) ChangePassword(ctx context.Context, userID int, req *model.ChangePasswordRequest) error {
+	// 获取用户
+	user, err := s.store.Users().GetByID(ctx, userID)
+	if err != nil {
+		return errors.New("用户不存在")
+	}
+
+	// 验证当前密码
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.CurrentPassword))
+	if err != nil {
+		return errors.New("当前密码错误")
+	}
+
+	// 检查新密码是否与当前密码相同
+	if req.CurrentPassword == req.NewPassword {
+		return errors.New("新密码不能与当前密码相同")
+	}
+
+	// 对新密码进行哈希处理
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return errors.New("密码处理失败")
+	}
+
+	// 更新密码
+	user.Password = string(hashedPassword)
+	user.UpdatedAt = time.Now()
+
+	// 保存到数据库
+	err = s.store.Users().Update(ctx, user)
+	if err != nil {
+		return errors.New("修改密码失败: " + err.Error())
+	}
+
+	return nil
 }

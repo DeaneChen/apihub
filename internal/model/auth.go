@@ -1,5 +1,9 @@
 package model
 
+import (
+	"time"
+)
+
 // LoginRequest 登录请求
 type LoginRequest struct {
 	Username string `json:"username" binding:"required,min=1,max=50"`
@@ -26,20 +30,24 @@ type LogoutResponse struct {
 
 // UserInfo 用户信息（用于响应）
 type UserInfo struct {
-	ID       int    `json:"id"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Role     string `json:"role"`
-	Status   int    `json:"status"`
+	ID        int       `json:"id"`
+	Username  string    `json:"username"`
+	Email     string    `json:"email"`
+	Role      string    `json:"role"`
+	Status    int       `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // ToUserInfo 将User模型转换为UserInfo
 func (u *User) ToUserInfo() *UserInfo {
 	return &UserInfo{
-		ID:       int(u.ID),
-		Username: u.Username,
-		Email:    u.Email,
-		Role:     u.Role,
-		Status:   u.Status,
+		ID:        u.ID,
+		Username:  u.Username,
+		Email:     u.Email,
+		Role:      u.Role,
+		Status:    u.Status,
+		CreatedAt: u.CreatedAt,
+		UpdatedAt: u.UpdatedAt,
 	}
 }

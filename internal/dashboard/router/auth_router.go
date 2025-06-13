@@ -74,6 +74,32 @@ func (r *AuthRouter) RegisterRoutes(router *gin.RouterGroup) {
 			// @Failure      401  {object}  model.APIResponse
 			// @Router       /api/v1/auth/profile [get]
 			protected.GET("/profile", r.authHandler.GetProfile)
+
+			// @Summary      更新个人资料
+			// @Description  更新当前登录用户的个人资料
+			// @Tags         认证
+			// @Accept       json
+			// @Produce      json
+			// @Security     BearerAuth
+			// @Param        request  body      model.UpdateProfileRequest  true  "更新个人资料请求"
+			// @Success      200      {object}  model.APIResponse{data=model.UpdateProfileResponse}
+			// @Failure      400      {object}  model.APIResponse
+			// @Failure      401      {object}  model.APIResponse
+			// @Router       /api/v1/auth/profile/update [post]
+			protected.POST("/profile/update", r.authHandler.UpdateProfile)
+
+			// @Summary      修改密码
+			// @Description  修改当前登录用户的密码
+			// @Tags         认证
+			// @Accept       json
+			// @Produce      json
+			// @Security     BearerAuth
+			// @Param        request  body      model.ChangePasswordRequest  true  "修改密码请求"
+			// @Success      200      {object}  model.APIResponse{data=model.ChangePasswordResponse}
+			// @Failure      400      {object}  model.APIResponse
+			// @Failure      401      {object}  model.APIResponse
+			// @Router       /api/v1/auth/password/change [post]
+			protected.POST("/password/change", r.authHandler.ChangePassword)
 		}
 	}
 }
@@ -93,6 +119,32 @@ func (r *AuthRouter) RegisterDashboardRoutes(dashboardGroup *gin.RouterGroup) {
 	// @Failure      401  {object}  model.APIResponse
 	// @Router       /api/v1/dashboard/profile [get]
 	dashboardGroup.GET("/profile", r.authHandler.GetProfile)
+
+	// @Summary      更新个人资料
+	// @Description  更新当前登录用户的个人资料（Dashboard版本）
+	// @Tags         仪表盘
+	// @Accept       json
+	// @Produce      json
+	// @Security     BearerAuth
+	// @Param        request  body      model.UpdateProfileRequest  true  "更新个人资料请求"
+	// @Success      200      {object}  model.APIResponse{data=model.UpdateProfileResponse}
+	// @Failure      400      {object}  model.APIResponse
+	// @Failure      401      {object}  model.APIResponse
+	// @Router       /api/v1/dashboard/profile/update [post]
+	dashboardGroup.POST("/profile/update", r.authHandler.UpdateProfile)
+
+	// @Summary      修改密码
+	// @Description  修改当前登录用户的密码（Dashboard版本）
+	// @Tags         仪表盘
+	// @Accept       json
+	// @Produce      json
+	// @Security     BearerAuth
+	// @Param        request  body      model.ChangePasswordRequest  true  "修改密码请求"
+	// @Success      200      {object}  model.APIResponse{data=model.ChangePasswordResponse}
+	// @Failure      400      {object}  model.APIResponse
+	// @Failure      401      {object}  model.APIResponse
+	// @Router       /api/v1/dashboard/password/change [post]
+	dashboardGroup.POST("/password/change", r.authHandler.ChangePassword)
 
 	// TODO: 添加其他dashboard功能路由
 	// dashboardGroup.GET("/users", userHandler.ListUsers)
