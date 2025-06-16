@@ -60,8 +60,6 @@ func (r *Router) SetupRoutes() *gin.Engine {
 	engine := gin.Default()
 
 	// 添加全局中间件
-	engine.Use(gin.Logger())
-	engine.Use(gin.Recovery())
 	engine.Use(corsMiddleware())
 
 	// Swagger文档路由

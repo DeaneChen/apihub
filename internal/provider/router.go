@@ -48,14 +48,14 @@ func (r *ProviderRouter) RegisterRoutes(router *gin.RouterGroup) {
 
 	// 服务执行端点（带认证）
 	authenticatedGroup := apiGroup.Group("/:service/execute")
-	authenticatedGroup.Use(r.serviceAuthMiddleware())
-	authenticatedGroup.Use(r.logMiddleware())
+	authenticatedGroup.Use(r.serviceAuthMiddleware()) // 先进行服务验证和用户认证
+	authenticatedGroup.Use(r.logMiddleware())         // 然后记录日志
 	authenticatedGroup.POST("", r.executeServiceHandler)
 
 	// 公开API端点（可选认证）
 	publicGroup := apiGroup.Group("/:service/public")
-	publicGroup.Use(r.optionalAuthMiddleware())
-	publicGroup.Use(r.logMiddleware())
+	publicGroup.Use(r.optionalAuthMiddleware()) // 先进行服务验证和可选用户认证
+	publicGroup.Use(r.logMiddleware())          // 然后记录日志
 	publicGroup.POST("", r.executePublicServiceHandler)
 }
 
@@ -155,8 +155,6 @@ func (r *ProviderRouter) serviceAuthMiddleware() gin.HandlerFunc {
 		} else {
 			middleware.OptionalAuthMiddleware(r.authServices.JWTService, r.authServices.APIKeyService)(c)
 		}
-
-		c.Next()
 	}
 }
 
@@ -200,16 +198,17 @@ func (r *ProviderRouter) optionalAuthMiddleware() gin.HandlerFunc {
 // logMiddleware 日志中间件
 func (r *ProviderRouter) logMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 处理请求
-		c.Next()
-
-		// 获取服务信息
+		// 在请求开始时获取服务信息
 		serviceInfo, exists := c.Get("service_info")
 		if !exists {
 			fmt.Printf("日志中间件：未找到服务信息\n")
+			c.Next()
 			return
 		}
 		service := serviceInfo.(*registry.ServiceInfo)
+
+		// 处理请求
+		c.Next()
 
 		// 获取用户ID和APIKey ID
 		var userID int

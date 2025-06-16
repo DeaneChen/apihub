@@ -17,29 +17,29 @@ type AccessLogRepository struct {
 }
 
 // Create 创建访问日志
-func (r *AccessLogRepository) Create(ctx context.Context, log *model.AccessLog) error {
+func (r *AccessLogRepository) Create(ctx context.Context, accessLog *model.AccessLog) error {
 	query := `
 		INSERT INTO access_logs (api_key_id, user_id, service_name, endpoint, status, cost, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`
 
-	log.CreatedAt = time.Now()
+	accessLog.CreatedAt = time.Now()
 
 	// 确保API密钥ID和用户ID至少为0（不为负数）
-	if log.APIKeyID < 0 {
-		log.APIKeyID = 0
+	if accessLog.APIKeyID < 0 {
+		accessLog.APIKeyID = 0
 	}
-	if log.UserID < 0 {
-		log.UserID = 0
+	if accessLog.UserID < 0 {
+		accessLog.UserID = 0
 	}
 
 	result, err := r.db.ExecContext(ctx, query,
-		log.APIKeyID, log.UserID, log.ServiceName, log.Endpoint,
-		log.Status, log.Cost, log.CreatedAt,
+		accessLog.APIKeyID, accessLog.UserID, accessLog.ServiceName, accessLog.Endpoint,
+		accessLog.Status, accessLog.Cost, accessLog.CreatedAt,
 	)
 	if err != nil {
 		fmt.Printf("SQL错误: %v, 参数: [%d, %d, %s, %s, %d, %d]\n",
-			err, log.APIKeyID, log.UserID, log.ServiceName, log.Endpoint, log.Status, log.Cost)
+			err, accessLog.APIKeyID, accessLog.UserID, accessLog.ServiceName, accessLog.Endpoint, accessLog.Status, accessLog.Cost)
 		return &store.DBError{
 			Code:    store.ErrDataConstraint,
 			Message: "failed to create access log",
@@ -56,7 +56,7 @@ func (r *AccessLogRepository) Create(ctx context.Context, log *model.AccessLog) 
 		}
 	}
 
-	log.ID = int(id)
+	accessLog.ID = int(id)
 	return nil
 }
 
@@ -67,10 +67,10 @@ func (r *AccessLogRepository) GetByID(ctx context.Context, id int) (*model.Acces
 		FROM access_logs WHERE id = ?
 	`
 
-	log := &model.AccessLog{}
+	accessLog := &model.AccessLog{}
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&log.ID, &log.APIKeyID, &log.UserID, &log.ServiceName,
-		&log.Endpoint, &log.Status, &log.Cost, &log.CreatedAt,
+		&accessLog.ID, &accessLog.APIKeyID, &accessLog.UserID, &accessLog.ServiceName,
+		&accessLog.Endpoint, &accessLog.Status, &accessLog.Cost, &accessLog.CreatedAt,
 	)
 
 	if err != nil {
@@ -87,7 +87,7 @@ func (r *AccessLogRepository) GetByID(ctx context.Context, id int) (*model.Acces
 		}
 	}
 
-	return log, nil
+	return accessLog, nil
 }
 
 // GetByUserID 根据用户ID获取访问日志
@@ -116,10 +116,10 @@ func (r *AccessLogRepository) GetByUserID(ctx context.Context, userID int, offse
 
 	var logs []*model.AccessLog
 	for rows.Next() {
-		log := &model.AccessLog{}
+		accessLog := &model.AccessLog{}
 		err := rows.Scan(
-			&log.ID, &log.APIKeyID, &log.UserID, &log.ServiceName,
-			&log.Endpoint, &log.Status, &log.Cost, &log.CreatedAt,
+			&accessLog.ID, &accessLog.APIKeyID, &accessLog.UserID, &accessLog.ServiceName,
+			&accessLog.Endpoint, &accessLog.Status, &accessLog.Cost, &accessLog.CreatedAt,
 		)
 		if err != nil {
 			return nil, &store.DBError{
@@ -128,7 +128,7 @@ func (r *AccessLogRepository) GetByUserID(ctx context.Context, userID int, offse
 				Err:     err,
 			}
 		}
-		logs = append(logs, log)
+		logs = append(logs, accessLog)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -168,10 +168,10 @@ func (r *AccessLogRepository) GetByAPIKeyID(ctx context.Context, apiKeyID int, o
 
 	var logs []*model.AccessLog
 	for rows.Next() {
-		log := &model.AccessLog{}
+		accessLog := &model.AccessLog{}
 		err := rows.Scan(
-			&log.ID, &log.APIKeyID, &log.UserID, &log.ServiceName,
-			&log.Endpoint, &log.Status, &log.Cost, &log.CreatedAt,
+			&accessLog.ID, &accessLog.APIKeyID, &accessLog.UserID, &accessLog.ServiceName,
+			&accessLog.Endpoint, &accessLog.Status, &accessLog.Cost, &accessLog.CreatedAt,
 		)
 		if err != nil {
 			return nil, &store.DBError{
@@ -180,7 +180,7 @@ func (r *AccessLogRepository) GetByAPIKeyID(ctx context.Context, apiKeyID int, o
 				Err:     err,
 			}
 		}
-		logs = append(logs, log)
+		logs = append(logs, accessLog)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -295,10 +295,10 @@ func (r *AccessLogRepository) List(ctx context.Context, offset, limit int) ([]*m
 
 	var logs []*model.AccessLog
 	for rows.Next() {
-		log := &model.AccessLog{}
+		accessLog := &model.AccessLog{}
 		err := rows.Scan(
-			&log.ID, &log.APIKeyID, &log.UserID, &log.ServiceName,
-			&log.Endpoint, &log.Status, &log.Cost, &log.CreatedAt,
+			&accessLog.ID, &accessLog.APIKeyID, &accessLog.UserID, &accessLog.ServiceName,
+			&accessLog.Endpoint, &accessLog.Status, &accessLog.Cost, &accessLog.CreatedAt,
 		)
 		if err != nil {
 			return nil, &store.DBError{
@@ -307,7 +307,7 @@ func (r *AccessLogRepository) List(ctx context.Context, offset, limit int) ([]*m
 				Err:     err,
 			}
 		}
-		logs = append(logs, log)
+		logs = append(logs, accessLog)
 	}
 
 	if err := rows.Err(); err != nil {
