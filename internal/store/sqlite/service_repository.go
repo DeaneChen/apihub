@@ -17,8 +17,8 @@ type ServiceRepository struct {
 // Create 创建服务定义
 func (r *ServiceRepository) Create(ctx context.Context, service *model.ServiceDefinition) error {
 	query := `
-		INSERT INTO service_definitions (service_name, description, default_limit, status, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?)
+		INSERT INTO service_definitions (service_name, description, default_limit, status, created_at, updated_at, allow_anonymous, rate_limit, quota_cost)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	now := time.Now()
@@ -28,6 +28,7 @@ func (r *ServiceRepository) Create(ctx context.Context, service *model.ServiceDe
 	result, err := r.db.ExecContext(ctx, query,
 		service.ServiceName, service.Description, service.DefaultLimit,
 		service.Status, service.CreatedAt, service.UpdatedAt,
+		service.AllowAnonymous, service.RateLimit, service.QuotaCost,
 	)
 	if err != nil {
 		if isUniqueConstraintError(err) {
@@ -60,7 +61,7 @@ func (r *ServiceRepository) Create(ctx context.Context, service *model.ServiceDe
 // GetByID 根据ID获取服务定义
 func (r *ServiceRepository) GetByID(ctx context.Context, id int) (*model.ServiceDefinition, error) {
 	query := `
-		SELECT id, service_name, description, default_limit, status, created_at, updated_at
+		SELECT id, service_name, description, default_limit, status, created_at, updated_at, allow_anonymous, rate_limit, quota_cost
 		FROM service_definitions WHERE id = ?
 	`
 
@@ -68,6 +69,7 @@ func (r *ServiceRepository) GetByID(ctx context.Context, id int) (*model.Service
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&service.ID, &service.ServiceName, &service.Description,
 		&service.DefaultLimit, &service.Status, &service.CreatedAt, &service.UpdatedAt,
+		&service.AllowAnonymous, &service.RateLimit, &service.QuotaCost,
 	)
 
 	if err != nil {
@@ -90,7 +92,7 @@ func (r *ServiceRepository) GetByID(ctx context.Context, id int) (*model.Service
 // GetByName 根据服务名获取服务定义
 func (r *ServiceRepository) GetByName(ctx context.Context, serviceName string) (*model.ServiceDefinition, error) {
 	query := `
-		SELECT id, service_name, description, default_limit, status, created_at, updated_at
+		SELECT id, service_name, description, default_limit, status, created_at, updated_at, allow_anonymous, rate_limit, quota_cost
 		FROM service_definitions WHERE service_name = ?
 	`
 
@@ -98,6 +100,7 @@ func (r *ServiceRepository) GetByName(ctx context.Context, serviceName string) (
 	err := r.db.QueryRowContext(ctx, query, serviceName).Scan(
 		&service.ID, &service.ServiceName, &service.Description,
 		&service.DefaultLimit, &service.Status, &service.CreatedAt, &service.UpdatedAt,
+		&service.AllowAnonymous, &service.RateLimit, &service.QuotaCost,
 	)
 
 	if err != nil {
@@ -121,7 +124,7 @@ func (r *ServiceRepository) GetByName(ctx context.Context, serviceName string) (
 func (r *ServiceRepository) Update(ctx context.Context, service *model.ServiceDefinition) error {
 	query := `
 		UPDATE service_definitions 
-		SET description = ?, default_limit = ?, status = ?, updated_at = ?
+		SET description = ?, default_limit = ?, status = ?, updated_at = ?, allow_anonymous = ?, rate_limit = ?, quota_cost = ?
 		WHERE id = ?
 	`
 
@@ -129,7 +132,8 @@ func (r *ServiceRepository) Update(ctx context.Context, service *model.ServiceDe
 
 	result, err := r.db.ExecContext(ctx, query,
 		service.Description, service.DefaultLimit, service.Status,
-		service.UpdatedAt, service.ID,
+		service.UpdatedAt, service.AllowAnonymous, service.RateLimit, service.QuotaCost,
+		service.ID,
 	)
 	if err != nil {
 		return &store.DBError{
@@ -193,7 +197,7 @@ func (r *ServiceRepository) Delete(ctx context.Context, id int) error {
 // List 获取服务定义列表
 func (r *ServiceRepository) List(ctx context.Context, offset, limit int) ([]*model.ServiceDefinition, error) {
 	query := `
-		SELECT id, service_name, description, default_limit, status, created_at, updated_at
+		SELECT id, service_name, description, default_limit, status, created_at, updated_at, allow_anonymous, rate_limit, quota_cost
 		FROM service_definitions 
 		ORDER BY created_at DESC
 		LIMIT ? OFFSET ?
@@ -215,6 +219,7 @@ func (r *ServiceRepository) List(ctx context.Context, offset, limit int) ([]*mod
 		err := rows.Scan(
 			&service.ID, &service.ServiceName, &service.Description,
 			&service.DefaultLimit, &service.Status, &service.CreatedAt, &service.UpdatedAt,
+			&service.AllowAnonymous, &service.RateLimit, &service.QuotaCost,
 		)
 		if err != nil {
 			return nil, &store.DBError{
@@ -240,7 +245,7 @@ func (r *ServiceRepository) List(ctx context.Context, offset, limit int) ([]*mod
 // GetEnabled 获取启用的服务定义列表
 func (r *ServiceRepository) GetEnabled(ctx context.Context) ([]*model.ServiceDefinition, error) {
 	query := `
-		SELECT id, service_name, description, default_limit, status, created_at, updated_at
+		SELECT id, service_name, description, default_limit, status, created_at, updated_at, allow_anonymous, rate_limit, quota_cost
 		FROM service_definitions 
 		WHERE status = ?
 		ORDER BY service_name
@@ -262,6 +267,7 @@ func (r *ServiceRepository) GetEnabled(ctx context.Context) ([]*model.ServiceDef
 		err := rows.Scan(
 			&service.ID, &service.ServiceName, &service.Description,
 			&service.DefaultLimit, &service.Status, &service.CreatedAt, &service.UpdatedAt,
+			&service.AllowAnonymous, &service.RateLimit, &service.QuotaCost,
 		)
 		if err != nil {
 			return nil, &store.DBError{

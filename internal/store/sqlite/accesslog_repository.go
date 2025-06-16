@@ -24,11 +24,21 @@ func (r *AccessLogRepository) Create(ctx context.Context, log *model.AccessLog) 
 
 	log.CreatedAt = time.Now()
 
+	// 确保API密钥ID和用户ID至少为0（不为负数）
+	if log.APIKeyID < 0 {
+		log.APIKeyID = 0
+	}
+	if log.UserID < 0 {
+		log.UserID = 0
+	}
+
 	result, err := r.db.ExecContext(ctx, query,
 		log.APIKeyID, log.UserID, log.ServiceName, log.Endpoint,
 		log.Status, log.Cost, log.CreatedAt,
 	)
 	if err != nil {
+		fmt.Printf("SQL错误: %v, 参数: [%d, %d, %s, %s, %d, %d]\n",
+			err, log.APIKeyID, log.UserID, log.ServiceName, log.Endpoint, log.Status, log.Cost)
 		return &store.DBError{
 			Code:    store.ErrDataConstraint,
 			Message: "failed to create access log",

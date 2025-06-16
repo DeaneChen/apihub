@@ -69,26 +69,26 @@ func OptionalAuthMiddleware(jwtService *jwt.JWTService, apiKeyService *apikey.AP
 				c.Set(string(jwt.UserIDKey), claims.UserID)
 				c.Set(string(jwt.UsernameKey), claims.Username)
 				c.Set(string(jwt.UserRoleKey), claims.Role)
-				c.Next()
-				return
+				// 不要立即返回，继续执行后续中间件
 			}
 		}
 
-		// JWT认证失败，尝试APIKey认证
-		apiKeyString := getAPIKeyFromRequest(c)
-		if apiKeyString != "" {
-			// 验证APIKey
-			apiKeyModel, err := apiKeyService.ValidateAPIKey(apiKeyString)
-			if err == nil {
-				// APIKey认证成功，设置APIKey信息到上下文
-				c.Set(string(apikey.APIKeyKey), apiKeyModel)
-				c.Set(string(apikey.APIKeyUserIDKey), apiKeyModel.UserID)
-				c.Next()
-				return
+		// 如果JWT认证失败或没有JWT，尝试APIKey认证
+		if _, exists := c.Get(string(jwt.UserIDKey)); !exists {
+			apiKeyString := getAPIKeyFromRequest(c)
+			if apiKeyString != "" {
+				// 验证APIKey
+				apiKeyModel, err := apiKeyService.ValidateAPIKey(apiKeyString)
+				if err == nil {
+					// APIKey认证成功，设置APIKey信息到上下文
+					c.Set(string(apikey.APIKeyKey), apiKeyModel)
+					c.Set(string(apikey.APIKeyUserIDKey), apiKeyModel.UserID)
+					// 不要立即返回，继续执行后续中间件
+				}
 			}
 		}
 
-		// 没有认证信息或认证失败，继续执行
+		// 无论认证是否成功，都继续执行后续中间件
 		c.Next()
 	}
 }

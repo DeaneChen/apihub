@@ -437,6 +437,26 @@
                 }
             }
         },
+        "/api/v1/health": {
+            "get": {
+                "description": "返回服务健康状态",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统"
+                ],
+                "summary": "健康检查接口",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "用户登录获取JWT Token",

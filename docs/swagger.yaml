@@ -463,6 +463,19 @@ paths:
       summary: 更新用户信息
       tags:
       - 用户管理
+  /api/v1/health:
+    get:
+      description: 返回服务健康状态
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.APIResponse'
+      summary: 健康检查接口
+      tags:
+      - 系统
   /auth/login:
     post:
       consumes:

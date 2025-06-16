@@ -44,15 +44,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_system_configs_key ON system_configs(confi
 -- 访问日志表
 CREATE TABLE IF NOT EXISTS access_logs (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    api_key_id  INTEGER NOT NULL,
-    user_id     INTEGER NOT NULL,
+    api_key_id  INTEGER NOT NULL DEFAULT 0,
+    user_id     INTEGER NOT NULL DEFAULT 0,
     service_name TEXT NOT NULL,
     endpoint    TEXT NOT NULL,
     status      INTEGER NOT NULL,
     cost        INTEGER DEFAULT 1,
-    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (api_key_id) REFERENCES api_keys(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 创建访问日志表索引

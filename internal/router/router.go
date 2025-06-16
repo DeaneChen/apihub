@@ -2,7 +2,10 @@ package router
 
 import (
 	"apihub/internal/auth"
+	dashboardRouter "apihub/internal/dashboard/router"
 	"apihub/internal/model"
+	"apihub/internal/provider"
+	"apihub/internal/provider/registry"
 	"apihub/internal/store"
 
 	"github.com/gin-gonic/gin"
@@ -35,37 +38,20 @@ import (
 // @name X-API-Key
 // @description API Key 认证
 
-// Router 主路由器
+// Router 主路由管理器
 type Router struct {
-	authRouter   *AuthRouter
-	apiKeyRouter *APIKeyRouter
-	userRouter   *UserRouter
+	store        store.Store
 	authServices *auth.AuthServices
+	registry     *registry.ServiceRegistry
 }
 
-// NewRouter 创建主路由器实例
-func NewRouter(store store.Store, authServices *auth.AuthServices) *Router {
+// NewRouter 创建主路由管理器实例
+func NewRouter(store store.Store, authServices *auth.AuthServices, registry *registry.ServiceRegistry) *Router {
 	return &Router{
-		authRouter:   NewAuthRouter(store, authServices),
-		apiKeyRouter: NewAPIKeyRouter(store, authServices),
-		userRouter:   NewUserRouter(store, authServices.JWTService),
+		store:        store,
 		authServices: authServices,
+		registry:     registry,
 	}
-}
-
-// AuthRouter 获取认证路由器
-func (r *Router) AuthRouter() *AuthRouter {
-	return r.authRouter
-}
-
-// APIKeyRouter 获取API密钥路由器
-func (r *Router) APIKeyRouter() *APIKeyRouter {
-	return r.apiKeyRouter
-}
-
-// UserRouter 获取用户路由器
-func (r *Router) UserRouter() *UserRouter {
-	return r.userRouter
 }
 
 // SetupRoutes 设置所有路由
@@ -87,43 +73,16 @@ func (r *Router) SetupRoutes() *gin.Engine {
 		// 健康检查
 		v1.GET("/health", healthCheck)
 
-		// 认证相关路由
-		r.authRouter.RegisterRoutes(v1)
+		// 创建并注册Dashboard路由
+		dashboard := dashboardRouter.NewRouter(r.store, r.authServices)
+		dashboard.SetupSubRoutes(v1)
 
-		// Dashboard路由（需要JWT认证）
-		dashboardGroup := v1.Group("/dashboard")
-		r.authRouter.RegisterDashboardRoutes(dashboardGroup)
-
-		// API密钥路由（需要JWT认证）
-		r.apiKeyRouter.RegisterRoutes(dashboardGroup)
-
-		// 用户管理路由（需要JWT认证）
-		r.userRouter.RegisterRoutes(dashboardGroup)
-
-		// API路由（支持JWT和APIKey认证）
-		r.authRouter.RegisterAPIRoutes(v1)
+		// 注册Provider路由
+		providerRouter := provider.NewProviderRouter(r.registry, r.authServices, r.store)
+		providerRouter.RegisterRoutes(v1)
 	}
 
 	return engine
-}
-
-// SetupSubRoutes 为子路由组设置路由
-func (r *Router) SetupSubRoutes(v1 *gin.RouterGroup) {
-	// 认证相关路由
-	r.authRouter.RegisterRoutes(v1)
-
-	// Dashboard路由（需要JWT认证）
-	dashboardGroup := v1.Group("/dashboard")
-	r.authRouter.RegisterDashboardRoutes(dashboardGroup)
-
-	// API密钥路由（需要JWT认证）
-	r.apiKeyRouter.RegisterRoutes(dashboardGroup)
-
-	// 用户管理路由（需要JWT认证）
-	r.userRouter.RegisterRoutes(dashboardGroup)
-
-	// API路由（支持JWT和APIKey认证）
-	r.authRouter.RegisterAPIRoutes(v1)
 }
 
 // @Summary      健康检查接口
@@ -131,7 +90,7 @@ func (r *Router) SetupSubRoutes(v1 *gin.RouterGroup) {
 // @Tags         系统
 // @Produce      json
 // @Success      200  {object}  model.APIResponse
-// @Router       /health [get]
+// @Router       /api/v1/health [get]
 // healthCheck 健康检查接口
 func healthCheck(c *gin.Context) {
 	c.JSON(200, model.NewSuccessResponse(gin.H{

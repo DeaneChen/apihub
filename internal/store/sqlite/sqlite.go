@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"embed"
 	"fmt"
+	"log"
+	"sort"
 	"strings"
 
 	"apihub/internal/store"
@@ -84,6 +86,22 @@ func (s *SQLiteStore) Migrate() error {
 		}
 	}
 
+	// 创建迁移表（如果不存在）
+	_, err := s.db.Exec(`
+		CREATE TABLE IF NOT EXISTS migrations (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL UNIQUE,
+			applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		return &store.DBError{
+			Code:    store.ErrMigrationFailed,
+			Message: "failed to create migrations table",
+			Err:     err,
+		}
+	}
+
 	// 读取迁移文件
 	entries, err := migrationFiles.ReadDir("migrations")
 	if err != nil {
@@ -94,31 +112,109 @@ func (s *SQLiteStore) Migrate() error {
 		}
 	}
 
-	// 按文件名排序执行迁移
+	// 获取已应用的迁移
+	rows, err := s.db.Query("SELECT name FROM migrations")
+	if err != nil {
+		return &store.DBError{
+			Code:    store.ErrMigrationFailed,
+			Message: "failed to query migrations",
+			Err:     err,
+		}
+	}
+	defer rows.Close()
+
+	appliedMigrations := make(map[string]bool)
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return &store.DBError{
+				Code:    store.ErrMigrationFailed,
+				Message: "failed to scan migration name",
+				Err:     err,
+			}
+		}
+		appliedMigrations[name] = true
+	}
+
+	if err := rows.Err(); err != nil {
+		return &store.DBError{
+			Code:    store.ErrMigrationFailed,
+			Message: "failed to iterate migrations",
+			Err:     err,
+		}
+	}
+
+	// 按文件名排序
+	var migrationNames []string
 	for _, entry := range entries {
 		if !strings.HasSuffix(entry.Name(), ".sql") {
 			continue
 		}
+		migrationNames = append(migrationNames, entry.Name())
+	}
+	sort.Strings(migrationNames)
+
+	// 按顺序执行迁移
+	for _, name := range migrationNames {
+		// 如果已应用，跳过
+		if appliedMigrations[name] {
+			log.Printf("迁移 %s 已应用，跳过", name)
+			continue
+		}
+
+		log.Printf("应用迁移 %s", name)
 
 		// 注意：embed.FS 总是使用正斜杠，即使在 Windows 上也是如此
-		migrationPath := "migrations/" + entry.Name()
+		migrationPath := "migrations/" + name
 		content, err := migrationFiles.ReadFile(migrationPath)
 		if err != nil {
 			return &store.DBError{
 				Code:    store.ErrMigrationFailed,
-				Message: fmt.Sprintf("failed to read migration file %s", entry.Name()),
+				Message: fmt.Sprintf("failed to read migration file %s", name),
+				Err:     err,
+			}
+		}
+
+		// 开始事务
+		tx, err := s.db.Begin()
+		if err != nil {
+			return &store.DBError{
+				Code:    store.ErrMigrationFailed,
+				Message: fmt.Sprintf("failed to begin transaction for migration %s", name),
 				Err:     err,
 			}
 		}
 
 		// 执行迁移SQL
-		if _, err := s.db.Exec(string(content)); err != nil {
+		if _, err := tx.Exec(string(content)); err != nil {
+			tx.Rollback()
 			return &store.DBError{
 				Code:    store.ErrMigrationFailed,
-				Message: fmt.Sprintf("failed to execute migration %s", entry.Name()),
+				Message: fmt.Sprintf("failed to execute migration %s", name),
 				Err:     err,
 			}
 		}
+
+		// 记录迁移
+		if _, err := tx.Exec("INSERT INTO migrations (name) VALUES (?)", name); err != nil {
+			tx.Rollback()
+			return &store.DBError{
+				Code:    store.ErrMigrationFailed,
+				Message: fmt.Sprintf("failed to record migration %s", name),
+				Err:     err,
+			}
+		}
+
+		// 提交事务
+		if err := tx.Commit(); err != nil {
+			return &store.DBError{
+				Code:    store.ErrMigrationFailed,
+				Message: fmt.Sprintf("failed to commit migration %s", name),
+				Err:     err,
+			}
+		}
+
+		log.Printf("迁移 %s 应用成功", name)
 	}
 
 	return nil

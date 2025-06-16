@@ -26,6 +26,7 @@ apihub/
 │   ├── provider/        # 功能性 API 提供者
 │   │   ├── registry/    # 服务注册中心
 │   │   └── services/    # 具体服务实现
+│   ├── router/          # 路由入口
 │   ├── middleware/      # 中间件
 │   ├── model/          # 数据模型
 │   └── store/          # 数据存储层

@@ -7,7 +7,9 @@ import (
 	"time"
 
 	"apihub/internal/auth"
-	"apihub/internal/dashboard/router"
+	"apihub/internal/provider"
+	"apihub/internal/provider/registry"
+	"apihub/internal/router"
 	"apihub/internal/store/sqlite"
 
 	// 导入 Swagger 文档
@@ -58,28 +60,40 @@ func main() {
 	// 创建认证服务
 	authServices, err := auth.NewAuthServices(authConfig, store)
 	if err != nil {
-		log.Fatalf("Failed to create auth services: %v", err)
+		log.Fatalf("创建认证服务失败: %v", err)
+	}
+
+	// 创建服务注册中心
+	serviceRegistry := registry.NewServiceRegistry(store)
+
+	// 注册功能API服务
+	if err := provider.RegisterServices(serviceRegistry); err != nil {
+		log.Fatalf("注册功能API服务失败: %v", err)
 	}
 
 	// 创建路由器
-	mainRouter := router.NewRouter(store, authServices)
+	mainRouter := router.NewRouter(store, authServices, serviceRegistry)
 
 	// 设置路由
 	engine := mainRouter.SetupRoutes()
 
 	// 启动服务器
-	log.Println("Starting APIHub server on :8080")
-	log.Println("API Documentation: http://localhost:8080/swagger/index.html")
-	log.Println("Auth endpoints:")
+	log.Println("启动APIHub服务器，监听端口 :8080")
+	log.Println("API文档: http://localhost:8080/swagger/index.html")
+	log.Println("认证端点:")
 	log.Println("  POST /api/v1/auth/login")
 	log.Println("  POST /api/v1/auth/logout")
 	log.Println("  GET  /api/v1/auth/profile")
-	log.Println("API Key endpoints:")
+	log.Println("API密钥端点:")
 	log.Println("  GET  /api/v1/dashboard/apikeys/list")
 	log.Println("  POST /api/v1/dashboard/apikeys/generate")
 	log.Println("  POST /api/v1/dashboard/apikeys/delete")
+	log.Println("功能API端点:")
+	log.Println("  GET  /api/v1/provider/services")
+	log.Println("  POST /api/v1/provider/:service/execute")
+	log.Println("  POST /api/v1/provider/:service/public")
 
 	if err := engine.Run(":8080"); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		log.Fatalf("启动服务器失败: %v", err)
 	}
 }
