@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
 
 	"apihub/internal/model"
@@ -107,7 +108,11 @@ func (r *AccessLogRepository) GetByUserID(ctx context.Context, userID int, offse
 			Err:     err,
 		}
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			log.Printf("关闭访问日志查询时出错: %v", closeErr)
+		}
+	}()
 
 	var logs []*model.AccessLog
 	for rows.Next() {
@@ -155,7 +160,11 @@ func (r *AccessLogRepository) GetByAPIKeyID(ctx context.Context, apiKeyID int, o
 			Err:     err,
 		}
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			log.Printf("关闭API密钥访问日志查询时出错: %v", closeErr)
+		}
+	}()
 
 	var logs []*model.AccessLog
 	for rows.Next() {
@@ -216,7 +225,11 @@ func (r *AccessLogRepository) GetUsageStats(ctx context.Context, userID int, ser
 			Err:     err,
 		}
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			log.Printf("关闭使用统计查询时出错: %v", closeErr)
+		}
+	}()
 
 	stats := &model.UsageStatsResponse{
 		UserID:      userID,
@@ -274,7 +287,11 @@ func (r *AccessLogRepository) List(ctx context.Context, offset, limit int) ([]*m
 			Err:     err,
 		}
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			log.Printf("关闭访问日志列表查询时出错: %v", closeErr)
+		}
+	}()
 
 	var logs []*model.AccessLog
 	for rows.Next() {

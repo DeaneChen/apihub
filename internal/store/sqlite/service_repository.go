@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"log"
 	"time"
 
 	"apihub/internal/model"
@@ -211,7 +212,11 @@ func (r *ServiceRepository) List(ctx context.Context, offset, limit int) ([]*mod
 			Err:     err,
 		}
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			log.Printf("关闭服务列表查询时出错: %v", closeErr)
+		}
+	}()
 
 	var services []*model.ServiceDefinition
 	for rows.Next() {
@@ -259,7 +264,11 @@ func (r *ServiceRepository) GetEnabled(ctx context.Context) ([]*model.ServiceDef
 			Err:     err,
 		}
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			log.Printf("关闭启用服务查询时出错: %v", closeErr)
+		}
+	}()
 
 	var services []*model.ServiceDefinition
 	for rows.Next() {

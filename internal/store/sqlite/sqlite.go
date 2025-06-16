@@ -121,7 +121,11 @@ func (s *SQLiteStore) Migrate() error {
 			Err:     err,
 		}
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			log.Printf("关闭迁移查询时出错: %v", closeErr)
+		}
+	}()
 
 	appliedMigrations := make(map[string]bool)
 	for rows.Next() {
@@ -187,7 +191,9 @@ func (s *SQLiteStore) Migrate() error {
 
 		// 执行迁移SQL
 		if _, err := tx.Exec(string(content)); err != nil {
-			tx.Rollback()
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				log.Printf("回滚事务时出错: %v", rollbackErr)
+			}
 			return &store.DBError{
 				Code:    store.ErrMigrationFailed,
 				Message: fmt.Sprintf("failed to execute migration %s", name),
@@ -197,7 +203,9 @@ func (s *SQLiteStore) Migrate() error {
 
 		// 记录迁移
 		if _, err := tx.Exec("INSERT INTO migrations (name) VALUES (?)", name); err != nil {
-			tx.Rollback()
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				log.Printf("回滚事务时出错: %v", rollbackErr)
+			}
 			return &store.DBError{
 				Code:    store.ErrMigrationFailed,
 				Message: fmt.Sprintf("failed to record migration %s", name),
