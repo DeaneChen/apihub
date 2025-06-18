@@ -153,71 +153,16 @@ type ServiceRegistry struct {
 
 ```go
 // NewServiceRegistry 创建服务注册中心
-func NewServiceRegistry(store store.Store) *ServiceRegistry {
-    return &ServiceRegistry{
-        services: make(map[string]*ServiceInfo),
-        store:    store,
-    }
-}
+
 
 // RegisterService 注册服务
-func (r *ServiceRegistry) RegisterService(name string, handler ServiceHandler, config ServiceConfig) error {
-    r.mu.Lock()
-    defer r.mu.Unlock()
-    
-    // 检查服务是否已存在
-    if _, exists := r.services[name]; exists {
-        return fmt.Errorf("服务 %s 已存在", name)
-    }
-    
-    // 从数据库获取服务定义
-    definition, err := r.store.Services().GetByName(context.Background(), name)
-    if err != nil {
-        // 服务定义不存在，创建默认定义
-        definition = &model.ServiceDefinition{
-            ServiceName:  name,
-            Description:  config.Description,
-            DefaultLimit: 1000, // 默认每日配额
-            Status:       model.ServiceStatusEnabled,
-        }
-        
-        // 保存到数据库
-        if err := r.store.Services().Create(context.Background(), definition); err != nil {
-            return fmt.Errorf("创建服务定义失败: %w", err)
-        }
-    }
-    
-    // 注册服务
-    r.services[name] = &ServiceInfo{
-        Definition: definition,
-        Config:     config,
-        Handler:    handler,
-    }
-    
-    return nil
-}
+
 
 // GetService 获取服务
-func (r *ServiceRegistry) GetService(name string) (*ServiceInfo, bool) {
-    r.mu.RLock()
-    defer r.mu.RUnlock()
-    
-    service, exists := r.services[name]
-    return service, exists
-}
+
 
 // ListServices 列出所有服务
-func (r *ServiceRegistry) ListServices() []*ServiceInfo {
-    r.mu.RLock()
-    defer r.mu.RUnlock()
-    
-    services := make([]*ServiceInfo, 0, len(r.services))
-    for _, service := range r.services {
-        services = append(services, service)
-    }
-    
-    return services
-}
+
 ```
 
 ### 4.2 服务路由
@@ -242,33 +187,7 @@ func NewProviderRouter(registry *ServiceRegistry, authServices *auth.AuthService
 }
 
 // RegisterRoutes 注册API路由
-func (r *ProviderRouter) RegisterRoutes(router *gin.RouterGroup) {
-    apiGroup := router.Group("/api/v1")
-    
-    // 服务状态检查端点
-    apiGroup.GET("/status", r.statusHandler)
-    
-    // 服务列表端点
-    apiGroup.GET("/services", r.listServicesHandler)
-    
-    // 服务信息端点
-    apiGroup.GET("/:service/info", r.serviceInfoHandler)
-    
-    // 服务执行端点（带认证）
-    authenticatedGroup := apiGroup.Group("/:service/execute")
-    authenticatedGroup.Use(r.serviceAuthMiddleware())
-    authenticatedGroup.Use(r.rateLimitMiddleware())
-    authenticatedGroup.Use(r.quotaMiddleware())
-    authenticatedGroup.Use(r.logMiddleware())
-    authenticatedGroup.POST("", r.executeServiceHandler)
-    
-    // 公开API端点（可选认证）
-    publicGroup := apiGroup.Group("/:service/public")
-    publicGroup.Use(r.optionalAuthMiddleware())
-    publicGroup.Use(r.publicRateLimitMiddleware())
-    publicGroup.Use(r.logMiddleware())
-    publicGroup.POST("", r.executePublicServiceHandler)
-}
+
 ```
 
 ### 4.3 中间件
@@ -279,47 +198,7 @@ func (r *ProviderRouter) RegisterRoutes(router *gin.RouterGroup) {
 
 ```go
 // serviceAuthMiddleware 服务认证中间件
-func (r *ProviderRouter) serviceAuthMiddleware() gin.HandlerFunc {
-    return func(c *gin.Context) {
-        // 获取服务名称
-        serviceName := c.Param("service")
-        
-        // 查找服务
-        service, exists := r.registry.GetService(serviceName)
-        if !exists {
-            c.JSON(http.StatusNotFound, model.NewErrorResponse(
-                model.CodeNotFound,
-                "服务不存在",
-            ))
-            c.Abort()
-            return
-        }
-        
-        // 检查服务状态
-        if service.Definition.Status != model.ServiceStatusEnabled {
-            c.JSON(http.StatusForbidden, model.NewErrorResponse(
-                model.CodeServiceDisabled,
-                "服务已禁用",
-            ))
-            c.Abort()
-            return
-        }
-        
-        // 检查是否允许匿名访问
-        if !service.Config.AllowAnonymous {
-            // 使用现有的认证中间件
-            middleware.AuthMiddleware(r.authServices.JWTService, r.authServices.APIKeyService)(c)
-            if c.IsAborted() {
-                return
-            }
-        }
-        
-        // 将服务信息存入上下文
-        c.Set("service_info", service)
-        
-        c.Next()
-    }
-}
+
 ```
 
 #### 4.3.2 限流中间件
