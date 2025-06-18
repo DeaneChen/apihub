@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"apihub/internal/model"
 	"apihub/internal/store"
@@ -46,15 +45,15 @@ func (r *ServiceRegistry) RegisterService(name string, handler ServiceHandler, c
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	// 检查服务是否已存在
+	// 检查服务是否已存在于内存中
 	if _, exists := r.services[name]; exists {
-		return fmt.Errorf("服务 %s 已存在", name)
+		return fmt.Errorf("服务 %s 已存在于内存中", name)
 	}
 
 	// 从数据库获取服务定义
 	definition, err := r.store.Services().GetByName(context.Background(), name)
 	if err != nil {
-		// 服务定义不存在，创建默认定义
+		// 服务定义不存在于数据库，创建新定义
 		definition = &model.ServiceDefinition{
 			ServiceName:    name,
 			Description:    config.Description,
@@ -69,34 +68,12 @@ func (r *ServiceRegistry) RegisterService(name string, handler ServiceHandler, c
 		if err := r.store.Services().Create(context.Background(), definition); err != nil {
 			return fmt.Errorf("创建服务定义失败: %w", err)
 		}
-	} else {
-		// 如果服务已存在但配置有变化，更新服务定义
-		needUpdate := false
-
-		if definition.AllowAnonymous != config.AllowAnonymous {
-			definition.AllowAnonymous = config.AllowAnonymous
-			needUpdate = true
-		}
-
-		if definition.RateLimit != config.RateLimit {
-			definition.RateLimit = config.RateLimit
-			needUpdate = true
-		}
-
-		if definition.QuotaCost != config.QuotaCost {
-			definition.QuotaCost = config.QuotaCost
-			needUpdate = true
-		}
-
-		if needUpdate {
-			definition.UpdatedAt = time.Now()
-			if err := r.store.Services().Update(context.Background(), definition); err != nil {
-				return fmt.Errorf("更新服务定义失败: %w", err)
-			}
-		}
 	}
+	// 如果服务已存在于数据库，则使用数据库中的配置，不更新数据库
+	// 打印服务定义
+	fmt.Println("服务定义:", definition)
 
-	// 注册服务
+	// 注册服务到内存
 	r.services[name] = &ServiceInfo{
 		Definition: definition,
 		Handler:    handler,

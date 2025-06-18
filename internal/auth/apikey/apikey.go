@@ -48,13 +48,13 @@ func (s *APIKeyService) CreateAPIKey(userID int, name, description string, expir
 	// 生成APIKey
 	keyString, err := s.GenerateAPIKey(32)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate API key: %w", err)
+		return nil, fmt.Errorf("生成API密钥失败: %w", err)
 	}
 
 	// 加密APIKey
 	encryptedKey, err := s.cryptoService.Encrypt(keyString)
 	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt API key: %w", err)
+		return nil, fmt.Errorf("加密API密钥失败: %w", err)
 	}
 
 	// 创建APIKey模型
@@ -70,7 +70,7 @@ func (s *APIKeyService) CreateAPIKey(userID int, name, description string, expir
 	// 保存到数据库
 	err = s.store.APIKeys().Create(context.Background(), apiKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create API key: %w", err)
+		return nil, fmt.Errorf("创建API密钥失败: %w", err)
 	}
 
 	// 返回时包含明文APIKey（仅此一次）
@@ -81,38 +81,35 @@ func (s *APIKeyService) CreateAPIKey(userID int, name, description string, expir
 // ValidateAPIKey 验证APIKey
 func (s *APIKeyService) ValidateAPIKey(keyString string) (*model.APIKey, error) {
 	if keyString == "" {
-		return nil, errors.New("API key cannot be empty")
+		return nil, errors.New("API密钥不能为空")
 	}
 
-	// 加密输入的APIKey用于查询
+	fmt.Printf("验证API密钥: %s...\n", keyString[:4])
+
+	// 加密输入的API密钥
 	encryptedKey, err := s.cryptoService.Encrypt(keyString)
 	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt API key for validation: %w", err)
+		return nil, fmt.Errorf("加密API密钥失败: %w", err)
 	}
 
-	// 从数据库查询
+	// 直接使用加密后的密钥查询数据库
 	apiKey, err := s.store.APIKeys().GetByKey(context.Background(), encryptedKey)
 	if err != nil {
-		return nil, fmt.Errorf("API key not found: %w", err)
+		return nil, fmt.Errorf("API密钥验证失败: %w", err)
 	}
 
 	// 检查APIKey状态
 	if apiKey.Status != model.APIKeyStatusActive {
-		return nil, errors.New("API key is not active")
+		return nil, errors.New("API密钥未激活")
 	}
 
 	// 检查过期时间
 	if apiKey.ExpiresAt != nil && time.Now().After(*apiKey.ExpiresAt) {
-		return nil, errors.New("API key has expired")
+		return nil, errors.New("API密钥已过期")
 	}
 
-	// 解密APIKey用于返回
-	decryptedKey, err := s.cryptoService.Decrypt(apiKey.APIKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt API key: %w", err)
-	}
-	apiKey.APIKey = decryptedKey
-
+	// 返回APIKey（包含明文密钥）
+	apiKey.APIKey = keyString
 	return apiKey, nil
 }
 
@@ -120,7 +117,7 @@ func (s *APIKeyService) ValidateAPIKey(keyString string) (*model.APIKey, error) 
 func (s *APIKeyService) GetAPIKeysByUserID(userID int) ([]*model.APIKey, error) {
 	apiKeys, err := s.store.APIKeys().GetByUserID(context.Background(), userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get API keys: %w", err)
+		return nil, fmt.Errorf("获取API密钥失败: %w", err)
 	}
 
 	// 解密所有APIKey
@@ -184,19 +181,19 @@ func (s *APIKeyService) RegenerateAPIKey(apiKeyID int) (*model.APIKey, error) {
 	// 获取现有APIKey
 	apiKey, err := s.store.APIKeys().GetByID(context.Background(), apiKeyID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get API key: %w", err)
+		return nil, fmt.Errorf("获取API密钥失败: %w", err)
 	}
 
 	// 生成新的APIKey
 	newKeyString, err := s.GenerateAPIKey(32)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate new API key: %w", err)
+		return nil, fmt.Errorf("生成新API密钥失败: %w", err)
 	}
 
 	// 加密新的APIKey
 	encryptedKey, err := s.cryptoService.Encrypt(newKeyString)
 	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt new API key: %w", err)
+		return nil, fmt.Errorf("加密新API密钥失败: %w", err)
 	}
 
 	// 更新APIKey
@@ -204,7 +201,7 @@ func (s *APIKeyService) RegenerateAPIKey(apiKeyID int) (*model.APIKey, error) {
 
 	err = s.store.APIKeys().Update(context.Background(), apiKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to update API key: %w", err)
+		return nil, fmt.Errorf("更新API密钥失败: %w", err)
 	}
 
 	// 返回时包含明文APIKey

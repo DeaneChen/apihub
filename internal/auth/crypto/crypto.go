@@ -2,13 +2,11 @@ package crypto
 
 import (
 	"crypto/aes"
-	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io"
 )
 
 // CryptoService 加密服务接口
@@ -31,74 +29,96 @@ func NewAESCryptoService(secretKey string) *AESCryptoService {
 	}
 }
 
-// Encrypt 加密明文
+// pkcs7Padding 添加PKCS7填充
+func pkcs7Padding(data []byte, blockSize int) []byte {
+	padding := blockSize - len(data)%blockSize
+	padtext := make([]byte, padding)
+	for i := range padtext {
+		padtext[i] = byte(padding)
+	}
+	return append(data, padtext...)
+}
+
+// pkcs7UnPadding 移除PKCS7填充
+func pkcs7UnPadding(data []byte) ([]byte, error) {
+	length := len(data)
+	if length == 0 {
+		return nil, errors.New("empty data")
+	}
+
+	padding := int(data[length-1])
+	if padding > length {
+		return nil, errors.New("invalid padding size")
+	}
+
+	return data[:length-padding], nil
+}
+
+// Encrypt 使用AES-ECB模式加密明文
 func (s *AESCryptoService) Encrypt(plaintext string) (string, error) {
 	if plaintext == "" {
-		return "", errors.New("plaintext cannot be empty")
+		return "", errors.New("明文不能为空")
 	}
 
 	// 创建AES cipher
 	block, err := aes.NewCipher(s.key)
 	if err != nil {
-		return "", fmt.Errorf("failed to create cipher: %w", err)
+		return "", fmt.Errorf("创建cipher失败: %w", err)
 	}
 
-	// 创建GCM模式
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return "", fmt.Errorf("failed to create GCM: %w", err)
-	}
+	// 对数据进行PKCS7填充
+	plainBytes := []byte(plaintext)
+	plainBytes = pkcs7Padding(plainBytes, block.BlockSize())
 
-	// 生成随机nonce
-	nonce := make([]byte, gcm.NonceSize())
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return "", fmt.Errorf("failed to generate nonce: %w", err)
-	}
+	// 加密
+	ciphertext := make([]byte, len(plainBytes))
+	blockSize := block.BlockSize()
 
-	// 加密数据
-	ciphertext := gcm.Seal(nonce, nonce, []byte(plaintext), nil)
+	// ECB模式加密
+	for i := 0; i < len(plainBytes); i += blockSize {
+		block.Encrypt(ciphertext[i:i+blockSize], plainBytes[i:i+blockSize])
+	}
 
 	// 返回base64编码的结果
 	return base64.StdEncoding.EncodeToString(ciphertext), nil
 }
 
-// Decrypt 解密密文
+// Decrypt 使用AES-ECB模式解密密文
 func (s *AESCryptoService) Decrypt(ciphertext string) (string, error) {
 	if ciphertext == "" {
-		return "", errors.New("ciphertext cannot be empty")
+		return "", errors.New("密文不能为空")
 	}
 
 	// base64解码
 	data, err := base64.StdEncoding.DecodeString(ciphertext)
 	if err != nil {
-		return "", fmt.Errorf("failed to decode base64: %w", err)
+		return "", fmt.Errorf("base64解码失败: %w", err)
 	}
 
 	// 创建AES cipher
 	block, err := aes.NewCipher(s.key)
 	if err != nil {
-		return "", fmt.Errorf("failed to create cipher: %w", err)
-	}
-
-	// 创建GCM模式
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return "", fmt.Errorf("failed to create GCM: %w", err)
+		return "", fmt.Errorf("创建cipher失败: %w", err)
 	}
 
 	// 检查数据长度
-	nonceSize := gcm.NonceSize()
-	if len(data) < nonceSize {
-		return "", errors.New("ciphertext too short")
+	blockSize := block.BlockSize()
+	if len(data)%blockSize != 0 {
+		return "", errors.New("密文长度不是块大小的整数倍")
 	}
 
-	// 分离nonce和密文
-	nonce, cipherData := data[:nonceSize], data[nonceSize:]
+	// 解密
+	plaintext := make([]byte, len(data))
 
-	// 解密数据
-	plaintext, err := gcm.Open(nil, nonce, cipherData, nil)
+	// ECB模式解密
+	for i := 0; i < len(data); i += blockSize {
+		block.Decrypt(plaintext[i:i+blockSize], data[i:i+blockSize])
+	}
+
+	// 移除填充
+	plaintext, err = pkcs7UnPadding(plaintext)
 	if err != nil {
-		return "", fmt.Errorf("failed to decrypt: %w", err)
+		return "", fmt.Errorf("移除填充失败: %w", err)
 	}
 
 	return string(plaintext), nil

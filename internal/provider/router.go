@@ -153,6 +153,7 @@ func (r *ProviderRouter) serviceAuthMiddleware() gin.HandlerFunc {
 				return
 			}
 		} else {
+			// 允许匿名访问，但也可以选择性地提供认证
 			middleware.OptionalAuthMiddleware(r.authServices.JWTService, r.authServices.APIKeyService)(c)
 		}
 	}

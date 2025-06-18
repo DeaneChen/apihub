@@ -93,23 +93,29 @@ func (r *APIKeyRepository) GetByKey(ctx context.Context, key string) (*model.API
 	`
 
 	apiKey := &model.APIKey{}
+	var expiresAt sql.NullTime
+
 	err := r.db.QueryRowContext(ctx, query, key).Scan(
 		&apiKey.ID, &apiKey.UserID, &apiKey.KeyName, &apiKey.APIKey,
-		&apiKey.Status, &apiKey.CreatedAt, &apiKey.ExpiresAt,
+		&apiKey.Status, &apiKey.CreatedAt, &expiresAt,
 	)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, &store.DBError{
 				Code:    store.ErrNotFound,
-				Message: "API key not found",
+				Message: "API密钥未找到",
 			}
 		}
 		return nil, &store.DBError{
 			Code:    store.ErrDataConstraint,
-			Message: "failed to get API key",
+			Message: "获取API密钥失败",
 			Err:     err,
 		}
+	}
+
+	if expiresAt.Valid {
+		apiKey.ExpiresAt = &expiresAt.Time
 	}
 
 	return apiKey, nil
@@ -165,17 +171,17 @@ func (r *APIKeyRepository) GetByUserID(ctx context.Context, userID int) ([]*mode
 func (r *APIKeyRepository) Update(ctx context.Context, apiKey *model.APIKey) error {
 	query := `
 		UPDATE api_keys 
-		SET key_name = ?, status = ?, expires_at = ?
+		SET key_name = ?, api_key = ?, status = ?, expires_at = ?
 		WHERE id = ?
 	`
 
 	result, err := r.db.ExecContext(ctx, query,
-		apiKey.KeyName, apiKey.Status, apiKey.ExpiresAt, apiKey.ID,
+		apiKey.KeyName, apiKey.APIKey, apiKey.Status, apiKey.ExpiresAt, apiKey.ID,
 	)
 	if err != nil {
 		return &store.DBError{
 			Code:    store.ErrDataConstraint,
-			Message: "failed to update API key",
+			Message: "更新API密钥失败",
 			Err:     err,
 		}
 	}
@@ -184,7 +190,7 @@ func (r *APIKeyRepository) Update(ctx context.Context, apiKey *model.APIKey) err
 	if err != nil {
 		return &store.DBError{
 			Code:    store.ErrDataConstraint,
-			Message: "failed to get affected rows",
+			Message: "获取受影响行数失败",
 			Err:     err,
 		}
 	}
@@ -192,7 +198,7 @@ func (r *APIKeyRepository) Update(ctx context.Context, apiKey *model.APIKey) err
 	if rowsAffected == 0 {
 		return &store.DBError{
 			Code:    store.ErrNotFound,
-			Message: "API key not found",
+			Message: "API密钥未找到",
 		}
 	}
 
