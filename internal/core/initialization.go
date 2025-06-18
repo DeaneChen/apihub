@@ -66,7 +66,13 @@ func (s *InitializationService) InitializeSystem(ctx context.Context) error {
 	}
 	log.Println("JWT密钥生成完成")
 
-	// 6. 标记系统已初始化
+	// 6. 生成APIKey密钥
+	if err := s.generateAPIKeySecret(ctx); err != nil {
+		return fmt.Errorf("生成APIKey密钥失败: %w", err)
+	}
+	log.Println("APIKey密钥生成完成")
+
+	// 7. 标记系统已初始化
 	if err := s.markSystemInitialized(ctx); err != nil {
 		return fmt.Errorf("标记系统初始化失败: %w", err)
 	}
@@ -154,6 +160,28 @@ func (s *InitializationService) generateJWTSecret(ctx context.Context) error {
 
 	secretHex := hex.EncodeToString(secret)
 	return s.store.Configs().Set(ctx, model.ConfigKeyJWTSecret, secretHex)
+}
+
+// generateAPIKeySecret 生成APIKey密钥
+func (s *InitializationService) generateAPIKeySecret(ctx context.Context) error {
+	// 检查是否已存在APIKey密钥
+	_, err := s.store.Configs().Get(ctx, model.ConfigKeyAPIKeySecret)
+	if err == nil {
+		return nil // 已存在，跳过
+	}
+
+	if dbErr, ok := err.(*store.DBError); !ok || dbErr.Code != store.ErrNotFound {
+		return err // 其他错误
+	}
+
+	// 生成32字节的随机密钥
+	secret := make([]byte, 32)
+	if _, err := rand.Read(secret); err != nil {
+		return fmt.Errorf("生成随机密钥失败: %w", err)
+	}
+
+	secretHex := hex.EncodeToString(secret)
+	return s.store.Configs().Set(ctx, model.ConfigKeyAPIKeySecret, secretHex)
 }
 
 // markSystemInitialized 标记系统已初始化

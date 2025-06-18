@@ -17,6 +17,7 @@ const (
 	ConfigKeySystemInitialized = "system_initialized"  // 系统是否已初始化
 	ConfigKeyDefaultQuotaLimit = "default_quota_limit" // 默认配额限制
 	ConfigKeyJWTSecret         = "jwt_secret"          // JWT密钥
+	ConfigKeyAPIKeySecret      = "apikey_secret"       // APIKey密钥
 	ConfigKeySystemTitle       = "system_title"        // 系统标题
 	ConfigKeySystemDescription = "system_description"  // 系统描述
 	ConfigKeyRegistrationOpen  = "registration_open"   // 是否开放注册
