@@ -20,6 +20,8 @@ const (
 	CodeInvalidCredentials = 1007 // 凭据无效
 	CodeTokenExpired       = 1008 // Token过期
 	CodeTokenInvalid       = 1009 // Token无效
+	CodeRateLimitExceeded  = 1010 // 请求频率超限
+	CodeQuotaExceeded      = 1011 // 配额超限
 )
 
 // 响应消息常量
@@ -34,6 +36,8 @@ const (
 	MsgInvalidCredentials = "用户名或密码错误"
 	MsgTokenExpired       = "Token已过期"
 	MsgTokenInvalid       = "Token无效"
+	MsgRateLimitExceeded  = "请求频率超限"
+	MsgQuotaExceeded      = "配额超限"
 )
 
 // NewSuccessResponse 创建成功响应

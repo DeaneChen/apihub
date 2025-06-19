@@ -22,14 +22,22 @@ type ProviderRouter struct {
 	registry     *registry.ServiceRegistry
 	authServices *auth.AuthServices
 	store        store.Store
+	rateLimiter  *middleware.RateLimiter
 }
 
 // NewProviderRouter 创建功能API路由器
 func NewProviderRouter(registry *registry.ServiceRegistry, authServices *auth.AuthServices, store store.Store) *ProviderRouter {
+	// 创建限流器，默认限制为60次/分钟
+	rateLimiter := middleware.NewRateLimiter(60)
+
+	// 启动定期清理任务，每小时清理一次，清理超过6小时未访问的限流器
+	rateLimiter.StartCleanupTask(1*time.Hour, 6*time.Hour)
+
 	return &ProviderRouter{
 		registry:     registry,
 		authServices: authServices,
 		store:        store,
+		rateLimiter:  rateLimiter,
 	}
 }
 
@@ -48,14 +56,16 @@ func (r *ProviderRouter) RegisterRoutes(router *gin.RouterGroup) {
 
 	// 服务执行端点（带认证）
 	authenticatedGroup := apiGroup.Group("/:service/execute")
-	authenticatedGroup.Use(r.serviceAuthMiddleware()) // 先进行服务验证和用户认证
-	authenticatedGroup.Use(r.logMiddleware())         // 然后记录日志
+	authenticatedGroup.Use(r.serviceAuthMiddleware())                            // 先进行服务验证和用户认证
+	authenticatedGroup.Use(middleware.ServiceRateLimitMiddleware(r.rateLimiter)) // 然后进行限流控制
+	authenticatedGroup.Use(r.logMiddleware())                                    // 最后记录日志
 	authenticatedGroup.POST("", r.executeServiceHandler)
 
 	// 公开API端点（可选认证）
 	publicGroup := apiGroup.Group("/:service/public")
-	publicGroup.Use(r.optionalAuthMiddleware()) // 先进行服务验证和可选用户认证
-	publicGroup.Use(r.logMiddleware())          // 然后记录日志
+	publicGroup.Use(r.optionalAuthMiddleware())                           // 先进行服务验证和可选用户认证
+	publicGroup.Use(middleware.ServiceRateLimitMiddleware(r.rateLimiter)) // 然后进行限流控制
+	publicGroup.Use(r.logMiddleware())                                    // 最后记录日志
 	publicGroup.POST("", r.executePublicServiceHandler)
 }
 
